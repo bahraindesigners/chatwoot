@@ -1,0 +1,113 @@
+name: Publish fork image to GHCR
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-ghcr-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/bahraindesigners/chatwoot
+
+jobs:
+  build:
+    if: github.repository == 'bahraindesigners/chatwoot' && github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Sign in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          tags: ${{ env.IMAGE }}:sha-${{ github.sha }}-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=Chatwoot fork with WhatsApp Cloud API media fixes
+          cache-from: type=gha,scope=ghcr-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=ghcr-${{ matrix.arch }}
+
+      - name: Verify image contents and media libraries
+        run: |
+          docker run --rm --entrypoint sh -e EXPECTED_SHA="$GITHUB_SHA" \
+            "$IMAGE:sha-$GITHUB_SHA-$ARCH" -ec '
+              test "$(cat /app/.git_sha)" = "$EXPECTED_SHA"
+              test -s /app/public/vite/.vite/manifest.json
+              test -s /app/app/services/whatsapp/media_upload_service.rb
+              bundle exec ruby -e '\''require "vips"; require "faraday/multipart"; puts "libvips #{Vips.version_string}: OK"'\''
+            '
+
+      - name: Publish verified architecture image
+        run: docker push "$IMAGE:sha-$GITHUB_SHA-$ARCH"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      packages: write
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Sign in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish multi-platform tags
+        run: |
+          docker buildx imagetools create \
+            --tag "$IMAGE:sha-$GITHUB_SHA" \
+            --tag "$IMAGE:develop" \
+            "$IMAGE:sha-$GITHUB_SHA-amd64" \
+            "$IMAGE:sha-$GITHUB_SHA-arm64"
+          docker buildx imagetools inspect "$IMAGE:sha-$GITHUB_SHA"
+          {
+            echo '## Image ready for Dokploy'
+            echo
+            echo 'Use this version for both Rails and Sidekiq:'
+            echo "\`$IMAGE:sha-$GITHUB_SHA\`"
+            echo
+            echo 'Platforms: linux/amd64 and linux/arm64.'
+            echo 'The develop tag follows successful builds; use the SHA tag to pin production.'
+          } >> "$GITHUB_STEP_SUMMARY"
