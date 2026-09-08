@@ -158,6 +158,9 @@ en:
       phone_info_fetch_failed: 'Failed to fetch phone number information. Please try again.'
       phone_number_already_exists: 'Channel already exists for this phone number: %{phone_number}, please contact support if the error persists'
       message_outside_messaging_window: 'Message not sent because the WhatsApp 24-hour customer service window is closed and no template parameters were provided. Send an approved template message instead.'
+      media_upload_failed: 'WhatsApp could not upload this attachment. Please try sending it again.'
+      unsupported_image_type: 'This image cannot be converted for WhatsApp. Please upload a JPEG or PNG image.'
+      image_too_large: 'WhatsApp images must be 5 MB or smaller after conversion. Please upload a smaller image.'
       authentication_template_requires_phone: 'Authentication templates require a WhatsApp phone number and cannot be sent to a BSUID-only contact.'
       template_category_required_for_bsuid: 'Template category could not be verified for this BSUID-only contact.'
       contact_info_request:

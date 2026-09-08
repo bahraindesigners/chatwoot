@@ -93,7 +93,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def media_url(media_id)
-    "#{api_base_path}/v13.0/#{media_id}"
+    "#{api_base_path}/v24.0/#{media_id}"
   end
 
   private
@@ -180,13 +180,12 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     blob = attachment.file.blob
     return unless blob.content_type == 'audio/opus'
 
-    return if blob.update(content_type: 'audio/ogg')
-
-    Rails.logger.error("Failed to normalize blob #{blob.id} content_type from audio/opus to audio/ogg")
+    Rails.logger.error("Failed to normalize blob #{blob.id} content_type from audio/opus to audio/ogg") unless blob.update(content_type: 'audio/ogg')
   end
 
   def build_attachment_content(type, attachment, message)
-    type_content = { 'link' => attachment.download_url }
+    media_id = Whatsapp::MediaUploadService.new(channel: whatsapp_channel, attachment: attachment, url: "#{phone_id_path('v24.0')}/media").perform
+    type_content = { 'id' => media_id }
     type_content['caption'] = message.outgoing_content unless %w[audio sticker].include?(type)
     type_content['filename'] = attachment.file.filename if type == 'document'
     type_content['voice'] = true if voice_message?(type, attachment)

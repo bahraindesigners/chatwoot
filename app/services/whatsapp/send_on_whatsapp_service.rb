@@ -15,7 +15,7 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
     return send_session_message if message.conversation.can_reply?
 
     message.update!(status: :failed, external_error: I18n.t('errors.whatsapp.message_outside_messaging_window'))
-  rescue CustomExceptions::WhatsappContactInfoRequestError => e
+  rescue CustomExceptions::WhatsappContactInfoRequestError, CustomExceptions::WhatsappMediaUploadError => e
     message.update!(status: :failed, external_error: e.message)
   end
 

@@ -51,11 +51,9 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
           status: 401
         )
 
-        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
-        expect(whatsapp_channel.inbox.conversations.count).not_to eq(0)
-        expect_contact_name
-        expect(whatsapp_channel.inbox.messages.first.content).to eq('Check out my product!')
-        expect(whatsapp_channel.inbox.messages.first.attachments.present?).to be false
+        expect { described_class.new(inbox: whatsapp_channel.inbox, params: params).perform }
+          .to raise_error(CustomExceptions::WhatsappMediaDownloadError)
+        expect(whatsapp_channel.inbox.messages).to be_empty
         expect(whatsapp_channel.authorization_error_count).to eq(1)
       end
     end
