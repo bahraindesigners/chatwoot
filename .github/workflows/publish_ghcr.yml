@@ -71,7 +71,7 @@ jobs:
               test "$(cat /app/.git_sha)" = "$EXPECTED_SHA"
               test -s /app/public/vite/.vite/manifest.json
               test -s /app/app/services/whatsapp/media_upload_service.rb
-              bundle exec ruby -e '\''require "vips"; require "faraday/multipart"; puts "libvips #{Vips.version_string}: OK"'\''
+              bundle exec ruby -e '\''require "vips"; require "faraday"; require "faraday/multipart"; puts "libvips #{Vips.version_string}: OK"'\''
             '
 
       - name: Publish verified architecture image
