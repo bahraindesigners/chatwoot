@@ -1,5 +1,6 @@
 require 'ruby_llm'
 require 'uri'
+require_relative 'providers/deepseek_chat_compatibility'
 
 module Llm::Config
   DEFAULT_MODEL = 'gpt-4.1-mini'.freeze
