@@ -32,9 +32,7 @@ class Captain::BaseTaskService
   end
 
   def api_base
-    endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence || 'https://api.openai.com/'
-    endpoint = endpoint.chomp('/')
-    "#{endpoint}/v1"
+    InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence || Llm::Config::DEFAULT_API_ENDPOINT
   end
 
   def make_api_call(messages:, model: nil, feature: nil, schema: nil, tools: [])
@@ -43,12 +41,13 @@ class Captain::BaseTaskService
     return { error: I18n.t('captain.disabled'), error_code: 403 } unless captain_tasks_enabled?
     return { error: I18n.t('captain.api_key_missing'), error_code: 401 } unless api_key_configured?
 
-    model = resolved_model(model: model, feature: feature)
+    model_route = resolved_model_route(model: model, feature: feature)
+    model = model_route[:model]
     instrumentation_params = build_instrumentation_params(model, messages)
     instrumentation_method = tools.any? ? :instrument_tool_session : :instrument_llm_call
 
     response = send(instrumentation_method, instrumentation_params) do
-      execute_ruby_llm_request(model: model, messages: messages, schema: schema, tools: tools)
+      execute_ruby_llm_request(model_route: model_route, messages: messages, schema: schema, tools: tools)
     end
 
     return response unless build_follow_up_context? && response[:message].present?
@@ -56,20 +55,20 @@ class Captain::BaseTaskService
     response.merge(follow_up_context: build_follow_up_context(messages, response))
   end
 
-  def resolved_model(model:, feature:)
-    return model if feature.blank?
+  def resolved_model_route(model:, feature:)
+    return { model: model, provider: Llm::Models.provider_for(model), source: :explicit } if feature.blank?
 
     route = Llm::FeatureRouter.resolve(feature: feature, account: account)
-    return model if model.present? && route[:source] == :default
+    return route unless model.present? && route[:source] == :default
 
-    route[:model]
+    { model: model, provider: Llm::Models.provider_for(model), source: :explicit }
   end
 
-  def execute_ruby_llm_request(model:, messages:, schema: nil, tools: [])
+  def execute_ruby_llm_request(model_route:, messages:, schema: nil, tools: [])
     credential = llm_credential
 
     Llm::Config.with_api_key(credential[:api_key], api_base: api_base) do |context|
-      chat = build_chat(context, model: model, messages: messages, schema: schema, tools: tools)
+      chat = build_chat(context, model_route: model_route, messages: messages, schema: schema, tools: tools)
 
       conversation_messages = messages.reject { |m| m[:role] == 'system' }
       return { error: 'No conversation messages provided', error_code: 400, request_messages: messages } if conversation_messages.empty?
@@ -82,15 +81,20 @@ class Captain::BaseTaskService
     { error: e.message, request_messages: messages }
   end
 
-  def build_chat(context, model:, messages:, schema: nil, tools: [])
-    chat = context.chat(model: model)
+  def build_chat(context, model_route:, messages:, schema: nil, tools: [])
+    chat_options = { model: model_route[:model] }
+    if model_route[:source] == :installation_override
+      chat_options[:provider] = model_route[:provider]
+      chat_options[:assume_model_exists] = true
+    end
+    chat = context.chat(**chat_options)
     system_msg = messages.find { |m| m[:role] == 'system' }
     chat.with_instructions(system_msg[:content]) if system_msg
     chat.with_schema(schema) if schema
 
     if tools.any?
       tools.each { |tool| chat = chat.with_tool(tool) }
-      chat.on_end_message { |message| record_generation(chat, message, model) }
+      chat.on_end_message { |message| record_generation(chat, message, model_route[:model]) }
     end
 
     chat
@@ -184,9 +188,7 @@ class Captain::BaseTaskService
                         end
   end
 
-  def use_account_openai_hook?
-    false
-  end
+  def use_account_openai_hook? = false
 
   def hook_llm_credential
     key = openai_hook&.settings&.dig('api_key').presence
@@ -214,10 +216,8 @@ class Captain::BaseTaskService
   end
 
   # Follow-up context for client-side refinement
-  def build_follow_up_context?
-    # FollowUpService should return its own updated context
-    !is_a?(Captain::FollowUpService)
-  end
+  # FollowUpService should return its own updated context
+  def build_follow_up_context? = !is_a?(Captain::FollowUpService)
 
   def build_follow_up_context(messages, response)
     {

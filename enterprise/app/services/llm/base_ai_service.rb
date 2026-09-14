@@ -6,7 +6,7 @@ class Llm::BaseAiService
   DEFAULT_MODEL = Llm::Config::DEFAULT_MODEL
   DEFAULT_TEMPERATURE = 1.0
 
-  attr_reader :model, :temperature
+  attr_reader :model, :provider, :temperature
 
   def initialize(feature: nil, account: nil, fallback_model: nil)
     @llm_feature = feature
@@ -19,7 +19,13 @@ class Llm::BaseAiService
   end
 
   def chat(model: @model, temperature: @temperature)
-    RubyLLM.chat(model: model).with_temperature(temperature)
+    options = { model: model }
+    if @provider
+      options[:provider] = @provider
+      options[:assume_model_exists] = @assume_model_exists
+    end
+
+    RubyLLM.chat(**options).with_temperature(temperature)
   end
 
   private
@@ -34,9 +40,21 @@ class Llm::BaseAiService
 
   def setup_model
     route = feature_route
-    return @model = route[:model] if account_override_route?(route) || captain_v2_assistant?
+    return apply_model_route(route) if account_override_route?(route) || installation_override_route?(route) || captain_v2_assistant?
 
-    @model = @fallback_model.presence || installation_model.presence || route&.dig(:model) || DEFAULT_MODEL
+    if @fallback_model.present?
+      return apply_model_route(model: @fallback_model, provider: Llm::Models.provider_for(@fallback_model), source: :fallback)
+    end
+
+    if installation_model.present?
+      return apply_model_route(
+        model: installation_model,
+        provider: Llm::Config.provider_for,
+        source: :installation_override
+      )
+    end
+
+    apply_model_route(route || { model: DEFAULT_MODEL, provider: Llm::Models.provider_for(DEFAULT_MODEL), source: :default })
   end
 
   def feature_route
@@ -49,12 +67,25 @@ class Llm::BaseAiService
     route&.dig(:source) == :account_override
   end
 
+  def installation_override_route?(route)
+    route&.dig(:source) == :installation_override
+  end
+
   def captain_v2_assistant?
     @llm_feature.to_s == 'assistant' && @llm_account&.feature_enabled?('captain_integration_v2')
   end
 
   def installation_model
     InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value
+  end
+
+  def apply_model_route(route)
+    @model = route[:model]
+    if route[:source] == :installation_override
+      @provider = route[:provider]
+      @assume_model_exists = true
+    end
+    @model
   end
 
   def setup_temperature

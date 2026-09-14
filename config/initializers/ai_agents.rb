@@ -9,13 +9,13 @@ Rails.application.config.after_initialize do
 
   if api_key.present?
     Agents.configure do |config|
-      config.openai_api_key = api_key
-      if api_endpoint.present?
-        api_base = "#{api_endpoint.chomp('/')}/v1"
-        config.openai_api_base = api_base
-      end
+      Llm::Config.configure_agents(config, api_key: api_key, api_endpoint: api_endpoint)
       config.default_model = model
       config.debug = false
+    end
+
+    RubyLLM.configure do |config|
+      Llm::Config.configure_provider(config, api_key: api_key, api_endpoint: api_endpoint)
     end
   end
 rescue StandardError => e

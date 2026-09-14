@@ -4,14 +4,21 @@ module Concerns::Agentable
   DEFAULT_TEMPERATURE = 0.5
 
   def agent(runtime_configuration: nil, runtime_agent_name: nil)
-    Agents::Agent.new(
+    route = agent_model_route
+    options = {
       name: runtime_agent_name || agent_name,
       instructions: ->(context) { agent_instructions(context, runtime_configuration: runtime_configuration) },
       tools: agent_tools,
-      model: agent_model,
+      model: route[:model],
       temperature: temperature.presence&.to_f || DEFAULT_TEMPERATURE,
       response_schema: agent_response_schema
-    )
+    }
+    if route[:source] == :installation_override
+      options[:provider] = route[:provider]
+      options[:assume_model_exists] = true
+    end
+
+    Agents::Agent.new(**options)
   end
 
   def agent_instructions(context = nil, prompt_template: template_name, runtime_configuration: nil)
@@ -33,10 +40,17 @@ module Concerns::Agentable
   end
 
   def agent_model
-    route = Llm::FeatureRouter.resolve(feature: 'assistant', account: account)
-    return route[:model] if route[:source] == :account_override || account&.feature_enabled?('captain_integration_v2')
+    agent_model_route[:model]
+  end
 
-    installation_model.presence || route[:model]
+  def agent_model_route
+    route = Llm::FeatureRouter.resolve(feature: 'assistant', account: account)
+    return route if route[:source] != :default || account&.feature_enabled?('captain_integration_v2')
+
+    model = installation_model.presence
+    return route unless model
+
+    route.merge(model: model, provider: Llm::Config.provider_for, source: :installation_override)
   end
 
   private

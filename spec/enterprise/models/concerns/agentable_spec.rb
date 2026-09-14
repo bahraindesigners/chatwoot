@@ -188,11 +188,11 @@ RSpec.describe Concerns::Agentable do
       expect(dummy_instance.send(:agent_model)).to eq('gpt-4.1-nano')
     end
 
-    it 'returns the Captain V2 default when Captain V2 is enabled' do
+    it 'returns the installation model when Captain V2 is enabled on self-hosted installations' do
       create(:installation_config, name: 'CAPTAIN_OPEN_AI_MODEL', value: 'gpt-4.1-nano')
       account.enable_features!('captain_integration_v2')
 
-      expect(dummy_instance.send(:agent_model)).to eq('gpt-5.2')
+      expect(dummy_instance.send(:agent_model)).to eq('gpt-4.1-nano')
       expect(account.reload.captain_models).to be_nil
     end
 

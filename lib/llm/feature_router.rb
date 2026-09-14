@@ -2,6 +2,7 @@ module Llm::FeatureRouter
   class UnknownFeatureError < StandardError; end
 
   CAPTAIN_V2_ASSISTANT_MODEL = 'gpt-5.2'.freeze
+  INSTALLATION_MODEL_FEATURES = %w[assistant conversation_completion].freeze
 
   class << self
     def resolve(feature:, account: nil)
@@ -37,14 +38,16 @@ module Llm::FeatureRouter
     end
 
     def installation_model_override(feature_key)
-      return unless feature_key == 'conversation_completion'
-      return unless ChatwootApp.self_hosted_paid?
+      return unless INSTALLATION_MODEL_FEATURES.include?(feature_key)
+      return if ChatwootApp.chatwoot_cloud?
 
       InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value.presence
     end
 
     def provider_for(model, source)
-      Llm::Models.provider_for(model) || ('openai' if source == :installation_override)
+      return Llm::Config.provider_for if source == :installation_override
+
+      Llm::Models.provider_for(model)
     end
 
     def captain_v2_assistant_model(account, feature_key)
