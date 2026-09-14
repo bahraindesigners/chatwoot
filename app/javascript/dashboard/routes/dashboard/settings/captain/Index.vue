@@ -17,7 +17,7 @@ import CaptainPaywall from 'next/captain/pageComponents/Paywall.vue';
 
 const { t } = useI18n();
 const { captainEnabled } = useCaptain();
-const { isEnterprise, enterprisePlanName } = useConfig();
+const { isEnterprise } = useConfig();
 const { isOnChatwootCloud } = useAccount();
 
 const captainConfigStore = useCaptainConfigStore();
@@ -61,7 +61,7 @@ const featureToggles = computed(() => [
 
 const shouldShowFeature = feature => {
   // Cloud will always see these features as long as captain is enabled
-  if (isOnChatwootCloud.value && captainEnabled) {
+  if (isOnChatwootCloud.value && captainEnabled.value) {
     return true;
   }
 
@@ -76,18 +76,12 @@ const shouldShowFeature = feature => {
 
 const isFeatureAccessible = feature => {
   // Cloud will always see these features as long as captain is enabled
-  if (isOnChatwootCloud.value && captainEnabled) {
+  if (isOnChatwootCloud.value && captainEnabled.value) {
     return true;
   }
 
   if (feature.enterprise) {
-    // plan is shown, but is it accessible?
-    // Paid self-hosted installations can access these Captain settings.
-    return (
-      isEnterprise &&
-      !isOnChatwootCloud.value &&
-      ['premium', 'enterprise'].includes(enterprisePlanName)
-    );
+    return isEnterprise && !isOnChatwootCloud.value;
   }
 
   return true;
