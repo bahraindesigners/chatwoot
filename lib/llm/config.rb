@@ -1,12 +1,10 @@
 require 'ruby_llm'
 require 'uri'
-require_relative 'providers/deepseek_chat_compatibility'
 
 module Llm::Config
   DEFAULT_MODEL = 'gpt-4.1-mini'.freeze
   DEFAULT_API_ENDPOINT = 'https://api.openai.com'.freeze
   PROVIDER_HOSTS = {
-    'api.deepseek.com' => 'deepseek',
     'openrouter.ai' => 'openrouter'
   }.freeze
 

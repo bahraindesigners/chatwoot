@@ -42,11 +42,11 @@ RSpec.describe Captain::Llm::ConversationFaqService do
         described_class.new(captain_assistant, conversation).generate_suggestions
       end
 
-      it 'uses the conversation FAQ default ahead of the legacy global installation model' do
+      it 'uses the global installation model for conversation FAQ generation on self-hosted installations' do
         create(:installation_config, name: 'CAPTAIN_OPEN_AI_MODEL', value: 'gpt-4.1-mini')
 
         expect(RubyLLM).to receive(:chat).with(
-          model: Llm::Models.default_model_for('conversation_faq_generation')
+          model: 'gpt-4.1-mini', provider: 'openai', assume_model_exists: true
         ).and_return(mock_chat)
 
         described_class.new(captain_assistant, conversation).generate_suggestions

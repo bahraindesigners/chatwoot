@@ -2,7 +2,20 @@ module Llm::FeatureRouter
   class UnknownFeatureError < StandardError; end
 
   CAPTAIN_V2_ASSISTANT_MODEL = 'gpt-5.2'.freeze
-  INSTALLATION_MODEL_FEATURES = %w[assistant conversation_completion].freeze
+  INSTALLATION_MODEL_FEATURES = %w[
+    conversation_completion
+    editor
+    assistant
+    copilot
+    label_suggestion
+    document_faq_generation
+    conversation_faq_generation
+    conversation_faq_matching
+    pdf_faq_generation
+    help_center_article_generation
+    onboarding_content_generation
+    help_center_query_translation
+  ].freeze
 
   class << self
     def resolve(feature:, account: nil)
