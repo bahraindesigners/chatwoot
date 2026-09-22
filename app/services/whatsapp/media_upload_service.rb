@@ -1,57 +1,78 @@
 require 'faraday/multipart'
 
+# Uploads an attachment to the WhatsApp Cloud media endpoint and returns its media_id.
+# Sending media by id keeps Meta from fetching the file from us over fwdproxy, which rate limits per
+# destination ASN and returns intermittent 131053 errors when instances share a hosting provider.
+# ref: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/media#upload-media
 class Whatsapp::MediaUploadService
-  IMAGE_CONTENT_TYPES = %w[image/jpeg image/png].freeze
-  MAX_IMAGE_SIZE = 5.megabytes
+  WHATSAPP_API_VERSION_FALLBACK = 'v22.0'.freeze
+  OPEN_TIMEOUT = 60
+  TIMEOUT = 300
 
-  pattr_initialize [:channel!, :attachment!, :url!]
+  def initialize(whatsapp_channel, attachment)
+    @whatsapp_channel = whatsapp_channel
+    @attachment = attachment
+  end
 
+  # Returns the media object to send ({ 'id' => media_id }), or nil when the upload is disabled or fails.
   def perform
-    blob = attachment.file.blob
-    blob.open do |file|
-      if attachment.image? && IMAGE_CONTENT_TYPES.exclude?(blob.content_type)
-        upload_converted_image(file)
-      else
-        upload(file, blob.content_type, blob.filename.to_s)
-      end
-    end
-  rescue Faraday::Error, JSON::ParserError => e
-    Rails.logger.warn("WhatsApp media upload failed for attachment #{attachment.id}: #{e.class}")
-    raise CustomExceptions::WhatsappMediaUploadError, I18n.t('errors.whatsapp.media_upload_failed')
+    return unless direct_upload_enabled? && @attachment.file.attached?
+
+    response = upload
+    media_id = response.body['id'] if response.body.is_a?(Hash)
+    return { 'id' => media_id } if response.success? && media_id.present?
+
+    log_failure("HTTP #{response.status} #{error_message(response)}")
+  rescue Faraday::Error, ActiveStorage::FileNotFoundError, ActiveStorage::IntegrityError => e
+    log_failure("#{e.class.name} #{e.message}")
   end
 
   private
 
-  def upload_converted_image(file)
-    raise CustomExceptions::WhatsappMediaUploadError, I18n.t('errors.whatsapp.unsupported_image_type') unless attachment.file.blob.variable?
-
-    # Use the configured Active Storage processor and keep the original attachment intact.
-    ActiveStorage::Variation.wrap(format: :png).transform(file) do |converted_file|
-      upload(converted_file, 'image/png', "#{attachment.file.filename.base}.png")
-    end
+  # Escape hatch for operators: WHATSAPP_MEDIA_UPLOAD_STRATEGY=link restores link based sending.
+  def direct_upload_enabled?
+    ENV.fetch('WHATSAPP_MEDIA_UPLOAD_STRATEGY', 'direct') == 'direct'
   end
 
-  def upload(file, content_type, filename)
-    raise CustomExceptions::WhatsappMediaUploadError, I18n.t('errors.whatsapp.image_too_large') if attachment.image? && file.size > MAX_IMAGE_SIZE
+  def upload
+    blob = @attachment.file.blob
 
-    response = connection.post(url, {
-                                 messaging_product: 'whatsapp',
-                                 type: content_type,
-                                 file: Faraday::Multipart::FilePart.new(file, content_type, filename)
-                               })
-    parsed_response = JSON.parse(response.body)
-    return parsed_response['id'] if response.success? && parsed_response['id'].present?
-
-    error = parsed_response['error'] || {}
-    details = [error['code'], error['message']].compact.join(': ')
-    raise CustomExceptions::WhatsappMediaUploadError, details.presence || I18n.t('errors.whatsapp.media_upload_failed')
+    blob.open do |file|
+      connection.post(upload_url) do |request|
+        request.headers['Authorization'] = "Bearer #{@whatsapp_channel.provider_config['api_key']}"
+        request.body = {
+          messaging_product: 'whatsapp',
+          type: blob.content_type,
+          file: Faraday::Multipart::FilePart.new(file, blob.content_type, blob.filename.to_s)
+        }
+      end
+    end
   end
 
   def connection
-    @connection ||= Faraday.new(headers: channel.api_headers.except('Content-Type')) do |faraday|
-      faraday.request :multipart
-      faraday.options.open_timeout = 10
-      faraday.options.timeout = 60
+    @connection ||= Faraday.new do |f|
+      f.request :multipart
+      f.response :json
+      f.options.timeout = TIMEOUT
+      f.options.open_timeout = OPEN_TIMEOUT
     end
+  end
+
+  def upload_url
+    base_path = ENV.fetch('WHATSAPP_CLOUD_BASE_URL', 'https://graph.facebook.com')
+    version = GlobalConfigService.load('WHATSAPP_API_VERSION', WHATSAPP_API_VERSION_FALLBACK)
+    "#{base_path}/#{version}/#{@whatsapp_channel.provider_config['phone_number_id']}/media"
+  end
+
+  def error_message(response)
+    return response.body.dig('error', 'message') if response.body.is_a?(Hash)
+
+    response.body.to_s.truncate(200)
+  end
+
+  def log_failure(reason)
+    Rails.logger.warn("[WHATSAPP] Media upload failed, falling back to link for account #{@whatsapp_channel.account_id} " \
+                      "inbox #{@whatsapp_channel.inbox&.id} attachment #{@attachment.id}: #{reason}")
+    nil
   end
 end

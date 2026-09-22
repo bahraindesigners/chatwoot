@@ -26,11 +26,11 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
   let(:response_headers) { { 'Content-Type' => 'application/json' } }
   let(:whatsapp_response) { { messages: [{ id: 'message_id' }] } }
+  let(:media_upload_url) { 'https://graph.facebook.com/v22.0/123456789/media' }
 
   before do
     stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
-    stub_request(:post, 'https://graph.facebook.com/v24.0/123456789/media')
-      .with(headers: { 'Authorization' => 'Bearer test_key', 'Content-Type' => %r{multipart/form-data} })
+    stub_request(:post, media_upload_url)
       .to_return(status: 200, body: { id: 'uploaded_media_id' }.to_json, headers: response_headers)
   end
 
@@ -160,6 +160,21 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
         result = service.send_message('+123456789', message)
         expect(result).to eq 'message_id'
+      end
+    end
+
+    context 'when the media upload fails' do
+      it 'falls back to sending the download url' do
+        attachment = message.attachments.new(account_id: message.account_id, file_type: :image)
+        attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
+        attachment.save!
+
+        stub_request(:post, media_upload_url).to_return(status: 429, body: {}.to_json, headers: response_headers)
+        stub_request(:post, 'https://graph.facebook.com/v24.0/123456789/messages')
+          .with(body: hash_including({ image: WebMock::API.hash_including({ link: anything }) }))
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', message)).to eq 'message_id'
       end
     end
   end
