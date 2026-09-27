@@ -45,7 +45,7 @@ module Concerns::Agentable
 
   def agent_model_route
     route = Llm::FeatureRouter.resolve(feature: 'assistant', account: account)
-    return route if route[:source] != :default || account&.feature_enabled?('captain_integration_v2')
+    return route if route[:source] != :default || account&.feature_enabled?('captain_integration')
 
     model = installation_model.presence
     return route unless model
