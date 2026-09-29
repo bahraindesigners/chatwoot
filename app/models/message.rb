@@ -146,6 +146,8 @@ class Message < ApplicationRecord
 
   def push_event_data
     data = attributes.symbolize_keys.merge(
+      content: Messages::ClientContentNormalizer.normalize(content),
+      processed_message_content: Messages::ClientContentNormalizer.normalize(processed_message_content),
       created_at: created_at.to_i,
       message_type: message_type_before_type_cast,
       conversation_id: conversation&.display_id,
