@@ -1,0 +1,63 @@
+name: Publish mobile text compatibility image
+
+on:
+  push:
+    branches: [codex/mobile-tab-compatibility]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: mobile-text-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/bahraindesigners/chatwoot
+  BASE_IMAGE: ghcr.io/bahraindesigners/chatwoot@sha256:37bbbccb1ef25be52c7e449283011abce3051cb20757b1ab00c46539841a1d9d
+
+jobs:
+  publish:
+    if: github.repository == 'bahraindesigners/chatwoot'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare overlay of the current release
+        run: |
+          mkdir -p /tmp/mobile-text-image
+          for file in app/models/message.rb app/services/messages/client_content_normalizer.rb app/views/api/v1/models/_message.json.jbuilder app/views/api/v1/models/_conversation.json.jbuilder; do
+            install -D "$file" "/tmp/mobile-text-image/$file"
+          done
+          printf '%s\n' "$GITHUB_SHA" > /tmp/mobile-text-image/.git_sha
+          {
+            printf 'FROM %s\n' "$BASE_IMAGE"
+            printf 'COPY app/ /app/app/\n'
+            printf 'COPY .git_sha /app/.git_sha\n'
+          } > /tmp/mobile-text-image/Dockerfile
+      - name: Build and check the native architecture
+        run: |
+          docker build --platform linux/amd64 -t mobile-text-check /tmp/mobile-text-image
+          docker run --rm --entrypoint ruby mobile-text-check -e 'module Messages; end; load "/app/app/services/messages/client_content_normalizer.rb"; source = "bullet\tArabic"; abort "tab conversion failed" unless Messages::ClientContentNormalizer.normalize(source) == "bullet    Arabic"; abort "input changed" unless source.include?("\t")'
+          docker run --rm --entrypoint ruby mobile-text-check -c /app/app/models/message.rb
+      - name: Publish immutable candidate only
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: /tmp/mobile-text-image
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: ${{ env.IMAGE }}:mobile-tabs-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=Backend-only mobile text compatibility patch
