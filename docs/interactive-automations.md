@@ -15,3 +15,5 @@ Incoming-message rules match before any matching rule runs its actions. This pre
 WhatsApp reply titles are currently stored as incoming message content. Configure content conditions using the displayed title, not the opaque reply value. Country or step context must also be included where titles repeat.
 
 The feature is generic; Blurides messages, images, assignments and rules are account configuration, not hardcoded application behavior.
+
+WhatsApp replies created by one rule execution are sent in action order through a single batch job. When a batch contains attachments, it retains the existing two-second Active Storage upload delay before sending any reply. Successful replies keep their provider message IDs, so retrying the batch skips replies already sent. Other channels and private notes retain their existing delivery jobs.
