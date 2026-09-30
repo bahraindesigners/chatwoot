@@ -74,6 +74,8 @@ en:
       cannot_revoke_current: You cannot revoke the current session.
 
   errors:
+    automation:
+      invalid_interactive_action: 'Check the interactive message, option limits, unique reply values, and contact attribute key.'
     account:
       not_authorized: You are not authorized to access this account
       email_limit_exceeded: The daily email limit for this account has been reached

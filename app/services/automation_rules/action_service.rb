@@ -40,6 +40,21 @@ class AutomationRules::ActionService < ActionService
     WebhookJob.perform_later(webhook_url[0], payload)
   end
 
+  def send_interactive_message(params)
+    payload = JSON.parse(params.fetch(0))
+    attributes = payload.except('content').merge(automation_rule_id: @rule.id).with_indifferent_access
+    Messages::MessageBuilder.new(nil, @conversation, {
+                                   content: payload.fetch('content'), content_type: 'input_select', private: false, content_attributes: attributes
+                                 }).perform
+  end
+
+  def update_contact_attribute(params)
+    contact = @conversation.contact
+    attributes = contact.custom_attributes.merge(params.fetch(0) => params.fetch(1))
+    attributes.delete(params.fetch(0)) if params.fetch(1).empty?
+    contact.update!(custom_attributes: attributes)
+  end
+
   def send_message(message)
     return if conversation_a_tweet?
 
