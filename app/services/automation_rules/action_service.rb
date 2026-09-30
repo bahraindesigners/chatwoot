@@ -43,9 +43,10 @@ class AutomationRules::ActionService < ActionService
   def send_interactive_message(params)
     payload = JSON.parse(params.fetch(0))
     attributes = payload.except('content').merge(automation_rule_id: @rule.id).with_indifferent_access
-    Messages::MessageBuilder.new(nil, @conversation, {
-                                   content: payload.fetch('content'), content_type: 'input_select', private: false, content_attributes: attributes
-                                 }).perform
+    message_params = ActionController::Parameters.new(
+      content: payload.fetch('content'), content_type: 'input_select', private: false, content_attributes: attributes
+    )
+    Messages::MessageBuilder.new(nil, @conversation, message_params).perform
   end
 
   def update_contact_attribute(params)
