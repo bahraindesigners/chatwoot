@@ -31,7 +31,7 @@ class AutomationRuleListener < BaseListener
     # must not consume the same incoming message as the next step's free-text answer.
     matching_rules = rules.select do |rule|
       ::AutomationRules::ConditionsFilterService.new(rule, message.conversation,
-                                                     { message: message, changed_attributes: changed_attributes }).perform
+                                                     { message: message, changed_attributes: changed_attributes }).perform.present?
     end
     matching_rules.each { |rule| execute_rule(rule, account, message.conversation, message: message) }
   end
