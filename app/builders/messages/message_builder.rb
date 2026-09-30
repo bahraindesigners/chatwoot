@@ -122,7 +122,7 @@ class Messages::MessageBuilder
   end
 
   def automation_rule_id
-    @automation_rule.present? ? { content_attributes: { automation_rule_id: @automation_rule } } : {}
+    @automation_rule.present? ? { content_attributes: content_attributes.merge(automation_rule_id: @automation_rule) } : {}
   end
 
   def campaign_id
