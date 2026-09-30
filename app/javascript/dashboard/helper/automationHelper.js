@@ -96,6 +96,8 @@ const ACTION_ICONS = {
   send_email_to_team: 'i-lucide-send',
   send_email_transcript: 'i-lucide-mail',
   send_message: 'i-lucide-message-square',
+  send_interactive_message: 'i-lucide-list',
+  update_contact_attribute: 'i-lucide-contact',
   add_private_note: 'i-lucide-sticky-note',
   send_attachment: 'i-lucide-paperclip',
   send_webhook_event: 'i-lucide-webhook',

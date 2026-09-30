@@ -3,6 +3,7 @@ class AutomationRules::ActionService < ActionService
     super(conversation)
     @rule = rule
     @account = account
+    @reply_messages = []
     Current.executed_by = rule
   end
 
@@ -18,9 +19,30 @@ class AutomationRules::ActionService < ActionService
     end
   ensure
     Current.reset
+    enqueue_whatsapp_replies
   end
 
   private
+
+  def build_reply(params)
+    if @conversation.inbox.channel_type == 'Channel::Whatsapp'
+      attributes = params[:content_attributes] || {}
+      params[:content_attributes] = attributes.merge(automation_rule_id: @rule.id, automation_reply_batch: true)
+    end
+    @reply_messages << Messages::MessageBuilder.new(nil, @conversation, params).perform
+  end
+
+  def enqueue_whatsapp_replies
+    return if @reply_messages.empty? || @conversation.inbox.channel_type != 'Channel::Whatsapp'
+
+    # Preserve Active Storage's upload delay, then send the rule's replies in action order.
+    job = if @reply_messages.any? { |message| message.attachments.present? }
+            AutomationRules::SendReplyBatchJob.set(wait: 2.seconds)
+          else
+            AutomationRules::SendReplyBatchJob
+          end
+    job.perform_later(@reply_messages.map(&:id))
+  end
 
   def send_attachment(blob_ids)
     return if conversation_a_tweet?
@@ -32,7 +54,7 @@ class AutomationRules::ActionService < ActionService
     return if blobs.blank?
 
     params = { content: nil, private: false, attachments: blobs }
-    Messages::MessageBuilder.new(nil, @conversation, params).perform
+    build_reply(params)
   end
 
   def send_webhook_event(webhook_url)
@@ -40,11 +62,27 @@ class AutomationRules::ActionService < ActionService
     WebhookJob.perform_later(webhook_url[0], payload)
   end
 
+  def send_interactive_message(params)
+    payload = JSON.parse(params.fetch(0))
+    attributes = payload.except('content').merge(automation_rule_id: @rule.id).with_indifferent_access
+    message_params = ActionController::Parameters.new(
+      content: payload.fetch('content'), content_type: 'input_select', private: false, content_attributes: attributes
+    )
+    build_reply(message_params)
+  end
+
+  def update_contact_attribute(params)
+    contact = @conversation.contact
+    attributes = contact.custom_attributes.merge(params.fetch(0) => params.fetch(1))
+    attributes.delete(params.fetch(0)) if params.fetch(1).empty?
+    contact.update!(custom_attributes: attributes)
+  end
+
   def send_message(message)
     return if conversation_a_tweet?
 
     params = { content: message[0], private: false, content_attributes: { automation_rule_id: @rule.id } }
-    Messages::MessageBuilder.new(nil, @conversation, params).perform
+    build_reply(params)
   end
 
   def add_private_note(message)
