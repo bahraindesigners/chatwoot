@@ -786,6 +786,16 @@ export const AUTOMATION_ACTION_TYPES = [
     inputType: 'attachment',
   },
   {
+    key: 'send_interactive_message',
+    label: 'SEND_INTERACTIVE_MESSAGE',
+    inputType: 'interactive_message',
+  },
+  {
+    key: 'update_contact_attribute',
+    label: 'SET_CONTACT_ATTRIBUTE',
+    inputType: 'contact_attribute',
+  },
+  {
     key: 'send_message',
     label: 'SEND_MESSAGE',
     inputType: 'textarea',

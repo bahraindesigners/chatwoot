@@ -6,11 +6,15 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import SingleSelect from 'dashboard/components-next/filter/inputs/SingleSelect.vue';
 import MultiSelect from 'dashboard/components-next/filter/inputs/MultiSelect.vue';
 import NextInput from 'dashboard/components-next/input/Input.vue';
+import AutomationInteractiveMessageInput from './AutomationInteractiveMessageInput.vue';
+import AutomationContactAttributeInput from './AutomationContactAttributeInput.vue';
 
 const CONTACT_EMAIL_TOKEN = '{{contact.email}}';
 
 export default {
   components: {
+    AutomationInteractiveMessageInput,
+    AutomationContactAttributeInput,
     AutomationActionTeamMessageInput,
     AutomationActionFileInput,
     WootMessageEditor,
@@ -99,7 +103,13 @@ export default {
       }));
     },
     isVerticalLayout() {
-      return ['team_message', 'textarea', 'email'].includes(this.inputType);
+      return [
+        'team_message',
+        'textarea',
+        'email',
+        'interactive_message',
+        'contact_attribute',
+      ].includes(this.inputType);
     },
     castMessageVmodel: {
       get() {
@@ -209,6 +219,14 @@ export default {
           @click="insertContactEmailToken"
         />
       </div>
+      <AutomationInteractiveMessageInput
+        v-if="inputType === 'interactive_message'"
+        v-model="castMessageVmodel"
+      />
+      <AutomationContactAttributeInput
+        v-else-if="inputType === 'contact_attribute'"
+        v-model="action_params"
+      />
       <AutomationActionTeamMessageInput
         v-else-if="inputType === 'team_message'"
         v-model="action_params"

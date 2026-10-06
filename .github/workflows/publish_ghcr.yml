@@ -2,7 +2,7 @@ name: Publish fork image to GHCR
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, codex/blurides-interactive-automations]
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,7 @@ env:
 
 jobs:
   build:
-    if: github.repository == 'bahraindesigners/chatwoot' && github.ref == 'refs/heads/develop'
+    if: github.repository == 'bahraindesigners/chatwoot' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/codex/blurides-interactive-automations')
     permissions:
       contents: read
       packages: write
@@ -96,9 +96,9 @@ jobs:
 
       - name: Publish multi-platform tags
         run: |
-          docker buildx imagetools create \
-            --tag "$IMAGE:sha-$GITHUB_SHA" \
-            --tag "$IMAGE:develop" \
+          TAG_ARGS=(--tag "$IMAGE:sha-$GITHUB_SHA")
+          if [ "$GITHUB_REF" = "refs/heads/develop" ]; then TAG_ARGS+=(--tag "$IMAGE:develop"); fi
+          docker buildx imagetools create "${TAG_ARGS[@]}" \
             "$IMAGE:sha-$GITHUB_SHA-amd64" \
             "$IMAGE:sha-$GITHUB_SHA-arm64"
           docker buildx imagetools inspect "$IMAGE:sha-$GITHUB_SHA"

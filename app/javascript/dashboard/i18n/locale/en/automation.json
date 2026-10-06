@@ -202,7 +202,9 @@
       "CHANGE_PRIORITY": "Change Priority",
       "ADD_SLA": "Add SLA",
       "OPEN_CONVERSATION": "Open conversation",
-      "PENDING_CONVERSATION": "Mark conversation as pending"
+      "PENDING_CONVERSATION": "Mark conversation as pending",
+      "SEND_INTERACTIVE_MESSAGE": "Send buttons or list",
+      "SET_CONTACT_ATTRIBUTE": "Set contact attribute"
     },
     "MESSAGE_TYPES": {
       "INCOMING": "Incoming Message",
@@ -233,6 +235,20 @@
       "TEAM_NAME": "Team",
       "PRIORITY": "Priority",
       "LABELS": "Labels"
+    },
+    "INTERACTIVE": {
+      "MESSAGE": "Message (up to 1,024 characters)",
+      "BUTTON_HELP": "Up to 3 options send reply buttons. Titles can contain up to 20 characters.",
+      "LIST_HELP": "4–10 options send a WhatsApp list. Titles can contain up to 24 characters.",
+      "OPTION_TITLE": "Option title",
+      "REPLY_VALUE": "Reply value",
+      "REMOVE_OPTION": "Remove",
+      "ADD_OPTION": "Add option",
+      "LIST_BUTTON": "List button (up to 20 characters)",
+      "LIST_SECTION": "Section title (up to 24 characters)",
+      "ATTRIBUTE_KEY": "Contact attribute key",
+      "ATTRIBUTE_VALUE": "Value",
+      "ATTRIBUTE_HELP": "Use an existing contact text attribute key. Leave the value empty to remove it."
     }
   }
 }
