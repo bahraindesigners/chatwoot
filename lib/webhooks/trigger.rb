@@ -116,6 +116,10 @@ class Webhooks::Trigger
 
   def update_message_status(error)
     preserve_delivery = evolution_inbox.present?
+    # A read timeout can happen after WhatsApp accepted the message. Its outcome
+    # is unknown until a provider acknowledgement arrives; do not claim failure.
+    return if preserve_delivery && error.is_a?(Net::ReadTimeout)
+
     Messages::StatusUpdateService.new(message, 'failed', error.message, preserve_delivery: preserve_delivery).perform
   end
 
