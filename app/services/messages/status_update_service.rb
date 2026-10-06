@@ -1,16 +1,18 @@
 class Messages::StatusUpdateService
   attr_reader :message, :status, :external_error
 
-  def initialize(message, status, external_error = nil)
+  def initialize(message, status, external_error = nil, preserve_delivery: false)
     @message = message
     @status = status.to_s
     @external_error = external_error
+    @preserve_delivery = preserve_delivery
   end
 
   def perform
     # Lock the row and re-check the transition inside the lock so concurrent
     # webhook workers can't race past the forward-only guard.
     message.with_lock do
+      next false if @preserve_delivery && status == 'failed' && %w[delivered read].include?(message.status)
       next false unless valid_status_transition?
 
       update_message_status

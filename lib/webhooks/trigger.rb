@@ -1,6 +1,7 @@
 class Webhooks::Trigger
   SUPPORTED_ERROR_HANDLE_EVENTS = %w[message_created message_updated].freeze
   RETRYABLE_AGENT_BOT_STATUSES = [429, 500].freeze
+  EVOLUTION_WEBHOOK_TIMEOUT = 60
 
   class RetryableError < StandardError
     attr_reader :status
@@ -41,7 +42,8 @@ class Webhooks::Trigger
   def perform_request
     body = @payload.to_json
     if (inbox = evolution_inbox)
-      return Evolution::Client.new.deliver_webhook(inbox, body, headers: request_headers(body), timeout: webhook_timeout)
+      timeout = [webhook_timeout, EVOLUTION_WEBHOOK_TIMEOUT].max
+      return Evolution::Client.new.deliver_webhook(inbox, body, headers: request_headers(body), timeout: timeout)
     end
 
     SafeFetch.fetch(
@@ -113,7 +115,8 @@ class Webhooks::Trigger
   end
 
   def update_message_status(error)
-    Messages::StatusUpdateService.new(message, 'failed', error.message).perform
+    preserve_delivery = evolution_inbox.present?
+    Messages::StatusUpdateService.new(message, 'failed', error.message, preserve_delivery: preserve_delivery).perform
   end
 
   def message
