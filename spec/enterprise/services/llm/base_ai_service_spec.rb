@@ -32,7 +32,7 @@ RSpec.describe Llm::BaseAiService do
 
     it 'uses the installation model for Captain V2 on self-hosted installations' do
       create(:installation_config, name: 'CAPTAIN_OPEN_AI_MODEL', value: 'gpt-4.1-nano')
-      account.enable_features!('captain_integration_v2')
+      account.enable_features!('captain_integration')
 
       expect(described_class.new(feature: 'assistant', account: account).model).to eq('gpt-4.1-nano')
       expect(account.reload.captain_models).to be_nil

@@ -40,7 +40,7 @@ class Llm::BaseAiService
 
   def setup_model
     route = feature_route
-    return apply_model_route(route) if account_override_route?(route) || installation_override_route?(route) || captain_v2_assistant?
+    return apply_model_route(route) if account_override_route?(route) || installation_override_route?(route) || captain_assistant?
 
     if @fallback_model.present?
       return apply_model_route(model: @fallback_model, provider: Llm::Models.provider_for(@fallback_model), source: :fallback)
@@ -71,8 +71,8 @@ class Llm::BaseAiService
     route&.dig(:source) == :installation_override
   end
 
-  def captain_v2_assistant?
-    @llm_feature.to_s == 'assistant' && @llm_account&.feature_enabled?('captain_integration_v2')
+  def captain_assistant?
+    @llm_feature.to_s == 'assistant' && @llm_account&.feature_enabled?('captain_integration')
   end
 
   def installation_model
