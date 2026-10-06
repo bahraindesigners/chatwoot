@@ -1634,6 +1634,25 @@
       "INSTAGRAM": "Instagram",
       "TIKTOK": "TikTok",
       "VOICE": "Voice"
+    },
+    "EVOLUTION": {
+      "TITLE": "Evolution WhatsApp",
+      "CHANNEL_DESCRIPTION": "Connect an internal number by scanning a QR code.",
+      "DESCRIPTION": "Keep using WhatsApp on your phone and handle its conversations here.",
+      "NAME": "Inbox name",
+      "PLACEHOLDER": "Internal Operations",
+      "SETUP_HINT": "Create the inbox, choose its agents, then scan a QR from the number’s phone. Groups and old message imports are disabled.",
+      "CREATE": "Create inbox",
+      "ERROR": "Could not reach Evolution. Try again or ask your administrator to check the service.",
+      "PAIR_TITLE": "Connect your WhatsApp number",
+      "CHECKING": "Checking connection…",
+      "CONNECTED": "WhatsApp connected",
+      "NOT_CONNECTED": "WhatsApp is not connected",
+      "SCAN_HINT": "On the number’s phone, open WhatsApp → Linked devices → Link a device and scan the QR below. Your phone app stays usable.",
+      "QR_ALT": "WhatsApp device pairing QR code",
+      "SHOW_QR": "Generate a new QR code",
+      "QR_PENDING": "The QR is not ready yet. Wait a moment, then generate a new QR code.",
+      "TEST_HINT": "Send a new message from another phone, then reply from this inbox to confirm delivery."
     }
   }
 }

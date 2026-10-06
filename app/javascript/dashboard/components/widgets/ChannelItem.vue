@@ -43,6 +43,9 @@ const isActive = computed(() => {
   if (key === 'email') {
     return props.enabledFeatures.channel_email;
   }
+  if (key === 'evolution') {
+    return window.chatwootConfig?.evolutionEnabled;
+  }
 
   if (key === 'instagram') {
     return (

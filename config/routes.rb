@@ -411,6 +411,10 @@ Rails.application.routes.draw do
             post 'manual/:inbox_id/setup_webhook', to: 'manual_setup#setup_webhook'
           end
 
+          post 'evolution', to: 'evolution#create'
+          get 'evolution/:inbox_id/status', to: 'evolution#status'
+          post 'evolution/:inbox_id/qr', to: 'evolution#qr'
+
           resources :webhooks, only: [:index, :create, :update, :destroy]
           namespace :integrations do
             resources :apps, only: [:index, :show]
