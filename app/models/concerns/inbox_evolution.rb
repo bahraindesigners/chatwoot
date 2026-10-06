@@ -7,7 +7,7 @@ module InboxEvolution
   end
 
   def evolution?
-    api? && channel.additional_attributes['provider'] == 'evolution'
+    channel.is_a?(Channel::Api) && channel.additional_attributes['provider'] == 'evolution'
   end
 
   private
