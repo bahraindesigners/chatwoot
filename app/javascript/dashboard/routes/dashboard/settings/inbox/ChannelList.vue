@@ -79,6 +79,15 @@ const channelList = computed(() => {
     },
   ];
 
+  if (window.chatwootConfig?.evolutionEnabled) {
+    channels.splice(3, 0, {
+      key: 'evolution',
+      title: t('INBOX_MGMT.EVOLUTION.TITLE'),
+      description: t('INBOX_MGMT.EVOLUTION.CHANNEL_DESCRIPTION'),
+      icon: 'i-woot-whatsapp',
+    });
+  }
+
   if (hasTiktokConfigured.value) {
     channels.push({
       key: 'tiktok',

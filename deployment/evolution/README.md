@@ -63,6 +63,44 @@ ssh -L 8081:127.0.0.1:8081 user@server
 
 ## Create an internal-number inbox
 
+### From the Chatwoot dashboard
+
+Deploy this fork's dashboard changes, then set these variables on **both Rails and
+Sidekiq** once. Use the same API key already configured on the Evolution service:
+
+```dotenv
+EVOLUTION_API_URL=http://lamma-evolution-api:8080
+EVOLUTION_API_KEY=<existing Evolution API key>
+```
+
+The URL above is the private network alias used by the Lamma Dokploy deployment.
+For the repository's merged Compose stack, use `http://evolution-api:8080` instead.
+Keep `FRONTEND_URL` set to Chatwoot's reachable HTTPS URL. The dashboard card is
+hidden until both Evolution variables are configured. Neither variable is sent
+to the browser.
+
+As a Chatwoot administrator:
+
+1. Open **Settings → Inboxes → Add inbox → Evolution WhatsApp**.
+2. Enter a unique inbox name and create the inbox.
+3. Assign agents, then continue to the pairing screen.
+4. Scan its QR from the number's WhatsApp **Linked devices → Link a device**.
+5. Wait for **Connected**, open the inbox, and verify a new inbound message and reply.
+
+Chatwoot creates the API inbox, callback, Evolution instance and native integration.
+It disables group chats and old-message/contact imports. A failed pairing can be
+retried from **Settings → Inboxes → your inbox → Settings** without creating another
+inbox. Deleting the inbox schedules deletion of its Evolution instance through
+Sidekiq. Its name and callback cannot be edited because Evolution routes by name.
+
+Evolution stores the pairing administrator's Chatwoot user token in its database.
+Use an administrator limited to this Chatwoot account. If that user's access is
+revoked or their token changes, pair again using an active administrator. Protect
+Evolution's database and backups. The phone owner must still scan the QR; Chatwoot
+cannot authorize a WhatsApp linked device on their behalf.
+
+### Command-line fallback
+
 Use a dedicated Chatwoot administrator account limited to the account being
 integrated. Evolution needs its user access token to create inboxes and route
 messages. The token is stored in Evolution's own database; protect its volumes and

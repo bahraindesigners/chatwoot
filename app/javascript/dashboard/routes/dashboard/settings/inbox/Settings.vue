@@ -18,6 +18,7 @@ import DuplicateInboxBanner from './channels/instagram/DuplicateInboxBanner.vue'
 import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
 import GoogleReauthorize from './channels/google/Reauthorize.vue';
 import WhatsappReauthorize from './channels/whatsapp/Reauthorize.vue';
+import EvolutionConnection from './components/EvolutionConnection.vue';
 import InboxHealthAPI from 'dashboard/api/inboxHealth';
 import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
@@ -54,6 +55,7 @@ import { META_RESTRICTION_STATUS_URL } from 'dashboard/constants/globals';
 
 export default {
   components: {
+    EvolutionConnection,
     Banner,
     BotConfiguration,
     CollaboratorsPage,
@@ -842,6 +844,14 @@ export default {
           class="mb-4"
           :class="bannerMaxWidth"
         />
+        <EvolutionConnection
+          v-if="
+            inbox.additional_attributes?.provider === 'evolution' &&
+            selectedTabKey === 'inbox-settings'
+          "
+          :key="inbox.id"
+          :inbox-id="inbox.id"
+        />
         <DuplicateInboxBanner
           v-if="hasDuplicateInstagramInbox"
           :content="$t('INBOX_MGMT.ADD.INSTAGRAM.DUPLICATE_INBOX_BANNER')"
@@ -907,6 +917,9 @@ export default {
             <SettingsFieldSection :label="inboxNameLabel">
               <woot-input
                 v-model="selectedInboxName"
+                :disabled="
+                  inbox.additional_attributes?.provider === 'evolution'
+                "
                 class="[&>input]:!mb-0"
                 :class="{ error: v$.selectedInboxName.$error }"
                 :placeholder="inboxNamePlaceHolder"
@@ -919,7 +932,10 @@ export default {
               />
             </SettingsFieldSection>
             <SettingsFieldSection
-              v-if="isAPIInbox"
+              v-if="
+                isAPIInbox &&
+                inbox.additional_attributes?.provider !== 'evolution'
+              "
               :label="
                 $t('INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_WEBHOOK_URL.LABEL')
               "

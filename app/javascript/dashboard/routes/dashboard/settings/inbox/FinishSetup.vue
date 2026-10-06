@@ -8,6 +8,7 @@ import EmptyState from '../../../../components/widgets/EmptyState.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import DuplicateInboxBanner from './channels/instagram/DuplicateInboxBanner.vue';
 import EmailInboxFinish from './channels/emailChannels/EmailInboxFinish.vue';
+import EvolutionConnection from './components/EvolutionConnection.vue';
 import WhatsappChannelAPI from 'dashboard/api/channel/whatsappChannel';
 import { useAlert } from 'dashboard/composables';
 import { useInbox } from 'dashboard/composables/useInbox';
@@ -185,11 +186,18 @@ watch(
 
 <template>
   <div class="overflow-auto col-span-6 p-6 w-full h-full">
+    <EvolutionConnection
+      v-if="currentInbox?.additional_attributes?.provider === 'evolution'"
+      :key="currentInbox.id"
+      :inbox-id="currentInbox.id"
+      auto-pair
+    />
     <DuplicateInboxBanner
       v-if="hasDuplicateInstagramInbox"
       :content="$t('INBOX_MGMT.ADD.INSTAGRAM.NEW_INBOX_SUGGESTION')"
     />
     <EmptyState
+      v-if="currentInbox?.additional_attributes?.provider !== 'evolution'"
       :title="$t('INBOX_MGMT.FINISH.TITLE')"
       :message="isAnEmailChannel && !currentInbox.provider ? '' : message"
       :button-text="$t('INBOX_MGMT.FINISH.BUTTON_TEXT')"

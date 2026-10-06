@@ -30,6 +30,11 @@
 # available at https://guides.rubyonrails.org/i18n.html.
 
 en:
+  evolution:
+    name_locked: "cannot be changed after creation because Evolution routes messages by inbox name"
+    invalid_name: "Enter an inbox name between 1 and 100 characters."
+    not_configured: "Evolution is not configured. Ask your administrator to enable the service."
+    provider_error: "Could not reach Evolution. Try again or ask your administrator to check the service."
   hello: 'Hello world'
   inbox:
     reauthorization:

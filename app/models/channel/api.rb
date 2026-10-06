@@ -29,6 +29,7 @@ class Channel::Api < ApplicationRecord
   has_secure_token :hmac_token
   include WebhookSecretable
   validate :ensure_valid_agent_reply_time_window
+  validate :ensure_evolution_configuration
   validates :webhook_url, length: { maximum: Limits::URL_LENGTH_LIMIT }
 
   def name
@@ -36,6 +37,15 @@ class Channel::Api < ApplicationRecord
   end
 
   private
+
+  def ensure_evolution_configuration
+    return unless persisted? && (additional_attributes_in_database || {})['provider'] == 'evolution'
+
+    errors.add(:additional_attributes, :invalid) unless additional_attributes['provider'] == 'evolution'
+    return if webhook_url_in_database.blank? || !will_save_change_to_webhook_url?
+
+    errors.add(:webhook_url, :invalid)
+  end
 
   def ensure_valid_agent_reply_time_window
     return if additional_attributes['agent_reply_time_window'].blank?
