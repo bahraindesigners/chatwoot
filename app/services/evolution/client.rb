@@ -51,6 +51,11 @@ class Evolution::Client
     "#{@url}/chatwoot/webhook/#{instance_name(inbox)}"
   end
 
+  def deliver_webhook(inbox, body, headers:, timeout:)
+    response = HTTParty.post(webhook_url(inbox), body: body, headers: headers, timeout: timeout, follow_redirects: false)
+    raise Error unless response.success?
+  end
+
   def delete_instance(account_id, inbox_id)
     request(:delete, "/instance/delete/cw-#{account_id}-inbox-#{inbox_id}")
   rescue NotFound

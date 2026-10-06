@@ -88,6 +88,9 @@ As a Chatwoot administrator:
 5. Wait for **Connected**, open the inbox, and verify a new inbound message and reply.
 
 Chatwoot creates the API inbox, callback, Evolution instance and native integration.
+Only the exact server-configured Evolution callback for a verified Evolution inbox
+can use its private network address. Other webhooks keep Chatwoot's public-address
+protection. Evolution callback redirects are not followed.
 It disables group chats and old-message/contact imports. A failed pairing can be
 retried from **Settings → Inboxes → your inbox → Settings** without creating another
 inbox. Deleting the inbox schedules deletion of its Evolution instance through
