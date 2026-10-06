@@ -40,6 +40,10 @@ class Webhooks::Trigger
 
   def perform_request
     body = @payload.to_json
+    if (inbox = evolution_inbox)
+      return Evolution::Client.new.deliver_webhook(inbox, body, headers: request_headers(body), timeout: webhook_timeout)
+    end
+
     SafeFetch.fetch(
       @url,
       method: :post,
@@ -49,6 +53,17 @@ class Webhooks::Trigger
       read_timeout: webhook_timeout,
       validate_content_type: false
     ) { |_response| nil }
+  end
+
+  def evolution_inbox
+    return unless @webhook_type == :api_inbox_webhook && Evolution::Client.configured?
+
+    base_url = Regexp.escape(ENV.fetch('EVOLUTION_API_URL').chomp('/'))
+    match = @url.match(%r{\A#{base_url}/chatwoot/webhook/cw-(\d+)-inbox-(\d+)\z})
+    return unless match
+
+    inbox = Inbox.find_by(account_id: match[1], id: match[2])
+    inbox if inbox&.evolution? && inbox.channel.webhook_url == @url
   end
 
   def request_headers(body)
