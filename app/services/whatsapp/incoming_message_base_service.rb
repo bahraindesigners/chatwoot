@@ -186,6 +186,8 @@ class Whatsapp::IncomingMessageBaseService
     referral_content_attrs = referral_attributes(message)
     content_attrs[:referral] = referral_content_attrs if referral_content_attrs.present?
 
+    add_interactive_reply_id(content_attrs, message)
+
     flow_response = message.dig(:interactive, :nfm_reply)
     if flow_response.present?
       content_attrs[:whatsapp_flow_response] = {
@@ -196,6 +198,11 @@ class Whatsapp::IncomingMessageBaseService
     end
 
     content_attrs
+  end
+
+  def add_interactive_reply_id(content_attrs, message)
+    reply = message.dig(:interactive, :button_reply) || message.dig(:interactive, :list_reply)
+    content_attrs[:interactive_reply_id] = reply[:id] if reply&.[](:id).present?
   end
 
   def update_contact_with_profile_name(contact_params)

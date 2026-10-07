@@ -302,6 +302,27 @@ RSpec.describe 'Conversation Messages API', type: :request do
       end
     end
 
+    context 'when retrying an interactive automation menu' do
+      let(:agent) { create(:user, account: account, role: :agent) }
+      let(:attributes) do
+        { 'items' => [{ 'title' => 'Choose', 'value' => 'stable-wire-id' }],
+          'interactive_automation' => { 'token' => 'menu-token', 'routes' => { 'stable-wire-id' => { 'value' => 'choice' } } },
+          'automation_rule_id' => 42, 'automation_reply_batch' => true, 'external_error' => 'failed' }
+      end
+      let(:message) { create(:message, account: account, status: :failed, content_type: :input_select, content_attributes: attributes) }
+
+      before { create(:inbox_member, inbox: message.conversation.inbox, user: agent) }
+
+      it 'preserves option IDs and route identity while clearing failed-send attributes' do
+        expect(SendReplyJob).to receive(:perform_later).with(message.id).once
+        post "/api/v1/accounts/#{account.id}/conversations/#{message.conversation.display_id}/messages/#{message.id}/retry",
+             headers: agent.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(message.reload.content_attributes).to eq(attributes.except('external_error', 'automation_reply_batch'))
+      end
+    end
+
     context 'when the message id is invalid' do
       let(:agent) { create(:user, account: account, role: :agent) }
 

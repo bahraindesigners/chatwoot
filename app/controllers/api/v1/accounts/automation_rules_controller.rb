@@ -4,6 +4,7 @@ class Api::V1::Accounts::AutomationRulesController < Api::V1::Accounts::BaseCont
   before_action :check_authorization
   before_action :fetch_automation_rule, only: [:show, :update, :destroy, :clone]
   before_action :ensure_execution_delay_allowed, only: [:create, :update]
+  before_action :ensure_interactive_actions_valid, only: [:create, :update]
 
   def index
     @automation_rules = Current.account.automation_rules
@@ -67,6 +68,12 @@ class Api::V1::Accounts::AutomationRulesController < Api::V1::Accounts::BaseCont
       conditions: [:attribute_key, :filter_operator, :query_operator, :custom_attribute_type, { values: [] }],
       actions: [:action_name, { action_params: [] }]
     )
+  end
+
+  def ensure_interactive_actions_valid
+    return if AutomationRules::InteractiveActionValidationService.new(params[:actions], Current.account).valid?
+
+    render json: { error: I18n.t('errors.automation.invalid_interactive_action') }, status: :unprocessable_entity
   end
 
   def ensure_execution_delay_allowed

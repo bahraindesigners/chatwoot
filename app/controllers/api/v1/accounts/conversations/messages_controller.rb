@@ -82,6 +82,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def retry_content_attributes
     return message.content_attributes if message.content_attributes.dig('whatsapp_contact_info', 'type') == 'request'
+    return message.content_attributes.except('external_error', 'automation_reply_batch') if message.input_select?
 
     {}
   end

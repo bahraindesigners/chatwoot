@@ -1,0 +1,9 @@
+# Review profile only. Apply through existing installation configuration controls
+# on a deployment entitled to custom branding. This file is not loaded at runtime.
+INSTALLATION_NAME: Lamma
+BRAND_NAME: Lamma
+LOGO: /brand-assets/lamma/logo.png
+LOGO_DARK: /brand-assets/lamma/logo-dark.png
+LOGO_THUMBNAIL: /brand-assets/lamma/logo-thumbnail.png
+# BRAND_URL, WIDGET_BRAND_URL, TERMS_URL and PRIVACY_URL intentionally omitted.
+# Supply verified destinations before changing them.

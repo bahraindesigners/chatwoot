@@ -20,6 +20,8 @@ class AutomationRuleListener < BaseListener
 
     return if ignore_message_created_event?(event)
 
+    return if ::AutomationRules::InteractiveReplyService.new(message).perform
+
     account = message.try(:account)
     changed_attributes = event.data[:changed_attributes]
 
@@ -27,11 +29,13 @@ class AutomationRuleListener < BaseListener
 
     rules = current_account_rules('message_created', account)
 
-    rules.each do |rule|
-      conditions_match = ::AutomationRules::ConditionsFilterService.new(rule, message.conversation,
-                                                                        { message: message, changed_attributes: changed_attributes }).perform
-      execute_rule(rule, account, message.conversation, message: message) if conditions_match.present?
+    # Match the incoming event before actions change labels or contact state. A menu transition
+    # must not consume the same incoming message as the next step's free-text answer.
+    matching_rules = rules.select do |rule|
+      ::AutomationRules::ConditionsFilterService.new(rule, message.conversation,
+                                                     { message: message, changed_attributes: changed_attributes }).perform.present?
     end
+    matching_rules.each { |rule| execute_rule(rule, account, message.conversation, message: message) }
   end
 
   private
