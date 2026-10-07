@@ -17,8 +17,7 @@ class AutomationRules::InteractiveActionValidationService
 
   def valid_next_step?(step)
     return false unless step.is_a?(Hash) && (step.keys - %w[automation_rule_id contact_attribute]).empty?
-    return false unless step['automation_rule_id'].is_a?(Integer)
-    return false unless @account.automation_rules.active.where(execution_delay: nil).exists?(id: step['automation_rule_id'])
+    return false unless valid_destination?(step['automation_rule_id'])
     return true unless step.key?('contact_attribute')
 
     attribute = step['contact_attribute']
@@ -27,6 +26,15 @@ class AutomationRules::InteractiveActionValidationService
   end
 
   private
+
+  def valid_destination?(rule_id)
+    rule_id.is_a?(Integer) && @account.automation_rules.active.where(execution_delay: nil).exists?(id: rule_id)
+  end
+
+  def reserved_legacy_ids?(items)
+    items.none? { |item| item.key?('next_step') } &&
+      items.any? { |item| AutomationRules::InteractiveFlowService::REPLY_ID_PATTERN.match?(item['value']) }
+  end
 
   def valid_action?(action)
     return false unless action.is_a?(Hash) || action.is_a?(ActionController::Parameters)
@@ -66,8 +74,7 @@ class AutomationRules::InteractiveActionValidationService
     return false unless valid_item_structure?(items)
     return false unless items.all? { |item| valid_item?(item, list?(items) ? 24 : 20) }
 
-    return false if items.none? { |item| item.key?('next_step') } &&
-                    items.any? { |item| AutomationRules::InteractiveFlowService::REPLY_ID_PATTERN.match?(item['value']) }
+    return false if reserved_legacy_ids?(items)
 
     items.pluck('value').uniq.length == items.length
   end

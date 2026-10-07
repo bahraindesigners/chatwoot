@@ -86,7 +86,8 @@ const routeName = item =>
 const invalidAttribute = item =>
   item.next_step?.contact_attribute &&
   !contactAttributes.value.some(
-    attribute => attribute.attribute_key === item.next_step.contact_attribute.key
+    attribute =>
+      attribute.attribute_key === item.next_step.contact_attribute.key
   );
 const addItem = () =>
   update({ items: [...payload.value.items, { title: '', value: '' }] });
@@ -128,7 +129,9 @@ const removeItem = index =>
           :label="$t('AUTOMATION.INTERACTIVE.REPLY_VALUE')"
           @update:model-value="updateItem(index, 'value', $event)"
         />
-        <label class="flex flex-col gap-1 text-sm text-n-slate-12 sm:col-span-2">
+        <label
+          class="flex flex-col gap-1 text-sm text-n-slate-12 sm:col-span-2"
+        >
           {{ $t('AUTOMATION.INTERACTIVE.NEXT_STEP') }}
           <select
             :value="item.next_step?.automation_rule_id || ''"
@@ -136,7 +139,9 @@ const removeItem = index =>
             data-testid="next-step"
             @change="updateNextStep(index, $event.target.value)"
           >
-            <option value="">{{ $t('AUTOMATION.INTERACTIVE.NO_NEXT_STEP') }}</option>
+            <option value="">
+              {{ $t('AUTOMATION.INTERACTIVE.NO_NEXT_STEP') }}
+            </option>
             <option
               v-if="item.next_step && !routeName(item)"
               :value="item.next_step.automation_rule_id"
@@ -153,7 +158,11 @@ const removeItem = index =>
           <p class="m-0 text-sm text-n-slate-11 sm:col-span-2">
             {{ $t('AUTOMATION.INTERACTIVE.NEXT_STEP_HELP') }}
           </p>
-          <p v-if="!routeName(item)" class="m-0 text-sm text-n-ruby-11 sm:col-span-2" role="alert">
+          <p
+            v-if="!routeName(item)"
+            class="m-0 text-sm text-n-ruby-11 sm:col-span-2"
+            role="alert"
+          >
             {{ $t('AUTOMATION.INTERACTIVE.INVALID_NEXT_STEP') }}
           </p>
           <label class="flex flex-col gap-1 text-sm text-n-slate-12">
@@ -162,9 +171,17 @@ const removeItem = index =>
               :value="item.next_step.contact_attribute?.key || ''"
               class="rounded-lg bg-n-alpha-1 p-2 outline outline-1 outline-n-weak"
               data-testid="contact-attribute"
-              @change="updateContactAttribute(index, $event.target.value, item.next_step.contact_attribute?.value || '')"
+              @change="
+                updateContactAttribute(
+                  index,
+                  $event.target.value,
+                  item.next_step.contact_attribute?.value || ''
+                )
+              "
             >
-              <option value="">{{ $t('AUTOMATION.INTERACTIVE.NO_CONTACT_ATTRIBUTE') }}</option>
+              <option value="">
+                {{ $t('AUTOMATION.INTERACTIVE.NO_CONTACT_ATTRIBUTE') }}
+              </option>
               <option
                 v-if="invalidAttribute(item)"
                 :value="item.next_step.contact_attribute.key"
@@ -186,9 +203,19 @@ const removeItem = index =>
             :model-value="item.next_step.contact_attribute.value"
             :label="$t('AUTOMATION.INTERACTIVE.ATTRIBUTE_VALUE')"
             :message="$t('AUTOMATION.INTERACTIVE.ROUTE_ATTRIBUTE_HELP')"
-            @update:model-value="updateContactAttribute(index, item.next_step.contact_attribute.key, $event)"
+            @update:model-value="
+              updateContactAttribute(
+                index,
+                item.next_step.contact_attribute.key,
+                $event
+              )
+            "
           />
-          <p v-if="invalidAttribute(item)" class="m-0 text-sm text-n-ruby-11 sm:col-span-2" role="alert">
+          <p
+            v-if="invalidAttribute(item)"
+            class="m-0 text-sm text-n-ruby-11 sm:col-span-2"
+            role="alert"
+          >
             {{ $t('AUTOMATION.INTERACTIVE.INVALID_CONTACT_ATTRIBUTE') }}
           </p>
         </template>
@@ -211,19 +238,46 @@ const removeItem = index =>
       :disabled="payload.items.length >= MAX_ITEMS"
       @click="addItem"
     />
-    <section class="rounded-lg border border-n-weak bg-n-alpha-1 p-3" :aria-label="$t('AUTOMATION.INTERACTIVE.PREVIEW')">
-      <p class="m-0 mb-2 text-sm font-medium text-n-slate-12">{{ $t('AUTOMATION.INTERACTIVE.PREVIEW') }}</p>
-      <p class="m-0 whitespace-pre-wrap text-sm text-n-slate-12">{{ payload.content }}</p>
+    <section
+      class="rounded-lg border border-n-weak bg-n-alpha-1 p-3"
+      :aria-label="$t('AUTOMATION.INTERACTIVE.PREVIEW')"
+    >
+      <p class="m-0 mb-2 text-sm font-medium text-n-slate-12">
+        {{ $t('AUTOMATION.INTERACTIVE.PREVIEW') }}
+      </p>
+      <p class="m-0 whitespace-pre-wrap text-sm text-n-slate-12">
+        {{ payload.content }}
+      </p>
       <ul class="m-0 mt-2 flex list-none flex-col gap-2 p-0">
-        <li v-for="(item, index) in payload.items" :key="index" class="rounded-lg border border-n-weak p-2 text-sm text-n-slate-12">
-          <span class="font-medium">{{ item.title || $t('AUTOMATION.INTERACTIVE.OPTION_TITLE') }}</span>
-          <p v-if="item.description" class="m-0 text-n-slate-11">{{ item.description }}</p>
+        <li
+          v-for="(item, index) in payload.items"
+          :key="index"
+          class="rounded-lg border border-n-weak p-2 text-sm text-n-slate-12"
+        >
+          <span class="font-medium">{{
+            item.title || $t('AUTOMATION.INTERACTIVE.OPTION_TITLE')
+          }}</span>
+          <p v-if="item.description" class="m-0 text-n-slate-11">
+            {{ item.description }}
+          </p>
           <p class="m-0 text-xs text-n-slate-11">
             {{ $t('AUTOMATION.INTERACTIVE.NEXT_STEP') }}:
-            {{ item.next_step ? routeName(item) || $t('AUTOMATION.INTERACTIVE.UNAVAILABLE_NEXT_STEP') : $t('AUTOMATION.INTERACTIVE.NO_NEXT_STEP') }}
+            {{
+              item.next_step
+                ? routeName(item) ||
+                  $t('AUTOMATION.INTERACTIVE.UNAVAILABLE_NEXT_STEP')
+                : $t('AUTOMATION.INTERACTIVE.NO_NEXT_STEP')
+            }}
           </p>
-          <p v-if="item.next_step?.contact_attribute" class="m-0 text-xs text-n-slate-11">
-            {{ item.next_step.contact_attribute.key }}: {{ item.next_step.contact_attribute.value || $t('AUTOMATION.INTERACTIVE.REMOVE_ATTRIBUTE') }}
+          <p
+            v-if="item.next_step?.contact_attribute"
+            class="m-0 text-xs text-n-slate-11"
+          >
+            {{ item.next_step.contact_attribute.key }}:
+            {{
+              item.next_step.contact_attribute.value ||
+              $t('AUTOMATION.INTERACTIVE.REMOVE_ATTRIBUTE')
+            }}
           </p>
         </li>
       </ul>

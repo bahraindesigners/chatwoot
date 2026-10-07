@@ -5,7 +5,7 @@ RSpec.describe ApplicationMailer do
     let(:config) { { 'BRAND_NAME' => 'Lamma', 'BRAND_URL' => 'https://example.com', 'LOGO' => '/brand-assets/lamma/logo.png' } }
 
     before do
-      allow(GlobalConfig).to receive(:get).with('BRAND_NAME', 'BRAND_URL', 'LOGO').and_return(config.dup)
+      allow(GlobalConfig).to receive(:get).with('BRAND_NAME', 'BRAND_URL', 'LOGO') { config.dup }
     end
 
     it 'uses resolved installation configuration for the absolute email logo' do

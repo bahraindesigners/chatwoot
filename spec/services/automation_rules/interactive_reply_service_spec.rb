@@ -2,13 +2,14 @@ require 'rails_helper'
 
 RSpec.describe AutomationRules::InteractiveReplyService do
   let(:account) { create(:account) }
-  let(:inbox) { create(:inbox, account: account, channel: create(:channel_whatsapp, account: account)) }
+  let(:channel) { create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false) }
+  let(:inbox) { create(:inbox, account: account, channel: channel) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox) }
   let(:target) { create(:automation_rule, account: account, actions: [{ action_name: 'send_message', action_params: ['Next step'] }]) }
   let(:rule) { create(:automation_rule, account: account) }
   let(:payload) do
     { 'content' => 'Choose', 'items' => [{ 'title' => 'Same title', 'value' => 'language_ar',
-                                         'next_step' => { 'automation_rule_id' => target.id } }] }
+                                          'next_step' => { 'automation_rule_id' => target.id } }] }
   end
   let(:flow) { AutomationRules::InteractiveFlowService.new(conversation, rule, 0) }
   let(:prepared) { flow.prepare(payload) }

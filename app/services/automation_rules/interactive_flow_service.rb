@@ -22,9 +22,7 @@ class AutomationRules::InteractiveFlowService
     routes = {}
     items = payload.fetch('items').map do |item|
       reply_id = "#{REPLY_PREFIX}#{token}:#{Digest::SHA256.hexdigest(item.fetch('value'))}"
-      step = item['next_step']
-      target = @rule.account.automation_rules.find_by(id: step['automation_rule_id']) if step
-      routes[reply_id] = { 'value' => item.fetch('value'), 'next_step' => step, 'target_updated_at' => target&.updated_at&.iso8601(6) }
+      routes[reply_id] = route_snapshot(item)
       item.except('next_step').merge('value' => reply_id)
     end
     payload.merge('items' => items, 'interactive_automation' => { 'token' => token, 'depth' => @depth, 'routes' => routes })
@@ -35,9 +33,20 @@ class AutomationRules::InteractiveFlowService
     state = message.content_attributes['interactive_automation']
     @conversation.with_lock do
       attributes = @conversation.additional_attributes.except(STATE_KEY)
-      attributes[STATE_KEY] = state.except('routes').merge('message_id' => message.id, 'rule_id' => @rule.id,
-                                                       'rule_updated_at' => @rule.updated_at.iso8601(6)) if state
+      if state
+        attributes[STATE_KEY] = state.except('routes').merge(
+          'message_id' => message.id, 'rule_id' => @rule.id, 'rule_updated_at' => @rule.updated_at.iso8601(6)
+        )
+      end
       @conversation.update!(additional_attributes: attributes)
     end
+  end
+
+  private
+
+  def route_snapshot(item)
+    step = item['next_step']
+    target = @rule.account.automation_rules.find_by(id: step['automation_rule_id']) if step
+    { 'value' => item.fetch('value'), 'next_step' => step, 'target_updated_at' => target&.updated_at&.iso8601(6) }
   end
 end

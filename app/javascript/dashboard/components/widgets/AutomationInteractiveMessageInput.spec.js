@@ -77,7 +77,9 @@ describe('AutomationInteractiveMessageInput option routes', () => {
     expect(store.dispatch).toHaveBeenCalledWith('automations/get');
     expect(store.dispatch).toHaveBeenCalledWith('attributes/get');
     expect(
-      wrapper.findAll('[data-testid="next-step"] option').map(o => o.attributes('value'))
+      wrapper
+        .findAll('[data-testid="next-step"] option')
+        .map(o => o.attributes('value'))
     ).toEqual(['', '10', '11']);
   });
 
@@ -112,11 +114,20 @@ describe('AutomationInteractiveMessageInput option routes', () => {
     payload.items[0].next_step = { automation_rule_id: 10 };
     const wrapper = mountInput();
     expect(
-      wrapper.findAll('[data-testid="contact-attribute"] option').map(o => o.attributes('value'))
+      wrapper
+        .findAll('[data-testid="contact-attribute"] option')
+        .map(o => o.attributes('value'))
     ).toEqual(['', 'language']);
-    await wrapper.find('[data-testid="contact-attribute"]').setValue('language');
-    await wrapper.setProps({ modelValue: JSON.stringify(latestPayload(wrapper)) });
-    wrapper.findAllComponents(NextInput).at(-1).vm.$emit('update:modelValue', 'en');
+    await wrapper
+      .find('[data-testid="contact-attribute"]')
+      .setValue('language');
+    await wrapper.setProps({
+      modelValue: JSON.stringify(latestPayload(wrapper)),
+    });
+    wrapper
+      .findAllComponents(NextInput)
+      .at(-1)
+      .vm.$emit('update:modelValue', 'en');
     expect(latestPayload(wrapper).items[0].next_step).toEqual({
       automation_rule_id: 10,
       contact_attribute: { key: 'language', value: 'en' },
@@ -134,7 +145,9 @@ describe('AutomationInteractiveMessageInput option routes', () => {
       automation_rule_id: 11,
       contact_attribute: { key: 'language', value: 'en' },
     });
-    await wrapper.setProps({ modelValue: JSON.stringify(latestPayload(wrapper)) });
+    await wrapper.setProps({
+      modelValue: JSON.stringify(latestPayload(wrapper)),
+    });
     await wrapper.find('[data-testid="contact-attribute"]').setValue('');
     expect(latestPayload(wrapper).items[0].next_step).toEqual({
       automation_rule_id: 11,
@@ -151,9 +164,16 @@ describe('AutomationInteractiveMessageInput option routes', () => {
     payload.list_section = 'Choose';
     const wrapper = mountInput();
     await wrapper.find('textarea').setValue('Updated prompt');
-    expect(latestPayload(wrapper)).toEqual({ ...payload, content: 'Updated prompt' });
-    await wrapper.setProps({ modelValue: JSON.stringify(latestPayload(wrapper)) });
-    wrapper.findAllComponents(NextInput)[0].vm.$emit('update:modelValue', 'English renamed');
+    expect(latestPayload(wrapper)).toEqual({
+      ...payload,
+      content: 'Updated prompt',
+    });
+    await wrapper.setProps({
+      modelValue: JSON.stringify(latestPayload(wrapper)),
+    });
+    wrapper
+      .findAllComponents(NextInput)[0]
+      .vm.$emit('update:modelValue', 'English renamed');
     expect(latestPayload(wrapper).items[0]).toEqual({
       ...payload.items[0],
       title: 'English renamed',
@@ -170,9 +190,12 @@ describe('AutomationInteractiveMessageInput option routes', () => {
       },
     ];
     const wrapper = mountInput();
-    const removeButton = wrapper.findAllComponents(NextButton).find(
-      button => button.attributes('label') === 'AUTOMATION.INTERACTIVE.REMOVE_OPTION'
-    );
+    const removeButton = wrapper
+      .findAllComponents(NextButton)
+      .find(
+        button =>
+          button.attributes('label') === 'AUTOMATION.INTERACTIVE.REMOVE_OPTION'
+      );
     removeButton.vm.$emit('click');
     expect(latestPayload(wrapper).items).toEqual([payload.items[1]]);
   });
@@ -184,14 +207,20 @@ describe('AutomationInteractiveMessageInput option routes', () => {
     };
     const wrapper = mountInput();
     expect(wrapper.findAll('[role="alert"]')).toHaveLength(2);
-    expect(wrapper.text()).toContain('AUTOMATION.INTERACTIVE.INVALID_NEXT_STEP');
-    expect(wrapper.text()).toContain('AUTOMATION.INTERACTIVE.INVALID_CONTACT_ATTRIBUTE');
+    expect(wrapper.text()).toContain(
+      'AUTOMATION.INTERACTIVE.INVALID_NEXT_STEP'
+    );
+    expect(wrapper.text()).toContain(
+      'AUTOMATION.INTERACTIVE.INVALID_CONTACT_ATTRIBUTE'
+    );
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
 
   it('previews the chosen route and preserves existing JSON with no route by default', async () => {
     const wrapper = mountInput();
-    expect(wrapper.find('section').text()).toContain('AUTOMATION.INTERACTIVE.NO_NEXT_STEP');
+    expect(wrapper.find('section').text()).toContain(
+      'AUTOMATION.INTERACTIVE.NO_NEXT_STEP'
+    );
     await wrapper.find('textarea').setValue('New prompt');
     expect(latestPayload(wrapper).items).toEqual(payload.items);
     payload.items[0].next_step = {
@@ -201,9 +230,12 @@ describe('AutomationInteractiveMessageInput option routes', () => {
     await wrapper.setProps({ modelValue: JSON.stringify(payload) });
     expect(wrapper.find('section').text()).toContain('English flow');
     expect(wrapper.find('section').text()).toContain('language: en');
-    const addButton = wrapper.findAllComponents(NextButton).find(
-      button => button.attributes('label') === 'AUTOMATION.INTERACTIVE.ADD_OPTION'
-    );
+    const addButton = wrapper
+      .findAllComponents(NextButton)
+      .find(
+        button =>
+          button.attributes('label') === 'AUTOMATION.INTERACTIVE.ADD_OPTION'
+      );
     addButton.vm.$emit('click');
     expect(latestPayload(wrapper).items).toEqual([
       payload.items[0],

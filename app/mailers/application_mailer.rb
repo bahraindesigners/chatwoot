@@ -27,17 +27,25 @@ class ApplicationMailer < ActionMailer::Base
     return unless logo.is_a?(String) && logo.present?
 
     uri = URI.parse(logo)
-    return uri.to_s if uri.is_a?(URI::HTTP) && uri.host.present? && uri.userinfo.nil?
-    return unless uri.scheme.nil? && uri.host.nil? && uri.path.start_with?('/') && !uri.path.split('/').include?('..')
+    return uri.to_s if valid_branding_origin?(uri)
+    return unless relative_branding_path?(uri)
 
     origin = URI.parse(frontend_url)
-    return unless origin.is_a?(URI::HTTP) && origin.host.present? && origin.userinfo.nil?
+    return unless valid_branding_origin?(origin)
 
     URI.join(origin.to_s, uri.to_s).to_s
   rescue URI::InvalidURIError
     nil
   end
-  private_class_method :branding_logo_url
+
+  def self.valid_branding_origin?(uri)
+    uri.is_a?(URI::HTTP) && uri.host.present? && uri.userinfo.nil?
+  end
+
+  def self.relative_branding_path?(uri)
+    uri.scheme.nil? && uri.host.nil? && uri.path.start_with?('/') && uri.path.split('/').exclude?('..')
+  end
+  private_class_method :branding_logo_url, :valid_branding_origin?, :relative_branding_path?
 
   rescue_from(*ExceptionList::SMTP_EXCEPTIONS, with: :handle_smtp_exceptions)
 
