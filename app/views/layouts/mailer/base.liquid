@@ -110,6 +110,13 @@
                   <tr style="margin: 0;">
                     <td class="content-wrap" style="vertical-align: top; margin: 0; padding: 40px 36px 20px; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;" valign="top">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0;">
+                        {% if global_config['LOGO_URL'] != nil and global_config['LOGO_URL'] != '' %}
+                          <tr>
+                            <td style="padding: 0 0 24px;">
+                              <img src="{{ global_config['LOGO_URL'] | escape }}" alt="{{ brand_name | escape }}" width="120" style="display: block; width: 120px; max-width: 100%; height: auto; border: 0;">
+                            </td>
+                          </tr>
+                        {% endif %}
                         {{ content_for_layout }}
                       </table>
                     </td>

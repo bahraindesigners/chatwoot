@@ -12,9 +12,32 @@ class ApplicationMailer < ActionMailer::Base
   helper :frontend_urls
   helper do
     def global_config
-      @global_config ||= GlobalConfig.get('BRAND_NAME', 'BRAND_URL')
+      @global_config ||= ApplicationMailer.branding_config
     end
   end
+
+  def self.branding_config
+    config = GlobalConfig.get('BRAND_NAME', 'BRAND_URL', 'LOGO')
+    logo_url = branding_logo_url(config['LOGO'], ENV.fetch('FRONTEND_URL', ''))
+    config['LOGO_URL'] = logo_url if logo_url
+    config
+  end
+
+  def self.branding_logo_url(logo, frontend_url)
+    return unless logo.is_a?(String) && logo.present?
+
+    uri = URI.parse(logo)
+    return uri.to_s if uri.is_a?(URI::HTTP) && uri.host.present? && uri.userinfo.nil?
+    return unless uri.scheme.nil? && uri.host.nil? && uri.path.start_with?('/') && !uri.path.split('/').include?('..')
+
+    origin = URI.parse(frontend_url)
+    return unless origin.is_a?(URI::HTTP) && origin.host.present? && origin.userinfo.nil?
+
+    URI.join(origin.to_s, uri.to_s).to_s
+  rescue URI::InvalidURIError
+    nil
+  end
+  private_class_method :branding_logo_url
 
   rescue_from(*ExceptionList::SMTP_EXCEPTIONS, with: :handle_smtp_exceptions)
 
@@ -54,7 +77,7 @@ class ApplicationMailer < ActionMailer::Base
   def liquid_locals
     # expose variables you want to be exposed in liquid
     locals = {
-      global_config: GlobalConfig.get('BRAND_NAME', 'BRAND_URL'),
+      global_config: self.class.branding_config,
       action_url: @action_url
     }
 
