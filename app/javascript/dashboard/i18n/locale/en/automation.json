@@ -248,7 +248,18 @@
       "LIST_SECTION": "Section title (up to 24 characters)",
       "ATTRIBUTE_KEY": "Contact attribute key",
       "ATTRIBUTE_VALUE": "Value",
-      "ATTRIBUTE_HELP": "Use an existing contact text attribute key. Leave the value empty to remove it."
+      "ATTRIBUTE_HELP": "Use an existing contact text attribute key. Leave the value empty to remove it.",
+      "NEXT_STEP": "Next step after this reply",
+      "NO_NEXT_STEP": "No next step",
+      "UNAVAILABLE_NEXT_STEP": "Unavailable automation",
+      "INVALID_NEXT_STEP": "Choose an active, instant automation in this account or remove this next step.",
+      "SAVE_CONTACT_ATTRIBUTE": "Save a contact attribute (optional)",
+      "NO_CONTACT_ATTRIBUTE": "Do not save an attribute",
+      "INVALID_CONTACT_ATTRIBUTE": "Choose an existing contact text attribute or remove it.",
+      "ROUTE_ATTRIBUTE_HELP": "Save this value before running the next step. Leave empty to remove the attribute.",
+      "PREVIEW": "Message and next-step preview",
+      "REMOVE_ATTRIBUTE": "Remove attribute",
+      "NEXT_STEP_HELP": "Runs this automation’s actions directly, without checking its trigger or conditions. Its normal trigger still runs independently, so use narrow conditions to avoid unrelated replies."
     }
   }
 }

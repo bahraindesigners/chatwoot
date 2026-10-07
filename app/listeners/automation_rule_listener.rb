@@ -20,6 +20,8 @@ class AutomationRuleListener < BaseListener
 
     return if ignore_message_created_event?(event)
 
+    return if ::AutomationRules::InteractiveReplyService.new(message).perform
+
     account = message.try(:account)
     changed_attributes = event.data[:changed_attributes]
 

@@ -186,6 +186,9 @@ class Whatsapp::IncomingMessageBaseService
     referral_content_attrs = referral_attributes(message)
     content_attrs[:referral] = referral_content_attrs if referral_content_attrs.present?
 
+    reply = message.dig(:interactive, :button_reply) || message.dig(:interactive, :list_reply)
+    content_attrs[:interactive_reply_id] = reply[:id] if reply&.[](:id).present?
+
     flow_response = message.dig(:interactive, :nfm_reply)
     if flow_response.present?
       content_attrs[:whatsapp_flow_response] = {

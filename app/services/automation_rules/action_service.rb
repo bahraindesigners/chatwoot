@@ -1,6 +1,7 @@
 class AutomationRules::ActionService < ActionService
-  def initialize(rule, account, conversation)
+  def initialize(rule, account, conversation, flow_depth: 0)
     super(conversation)
+    @flow_depth = flow_depth
     @rule = rule
     @account = account
     @reply_messages = []
@@ -8,15 +9,18 @@ class AutomationRules::ActionService < ActionService
   end
 
   def perform
+    failed = false
     @rule.actions.each do |action|
       @conversation.reload
       action = action.with_indifferent_access
       begin
         send(action[:action_name], action[:action_params])
       rescue StandardError => e
+        failed = true
         ChatwootExceptionTracker.new(e, account: @account).capture_exception
       end
     end
+    !failed
   ensure
     Current.reset
     enqueue_whatsapp_replies
@@ -29,7 +33,9 @@ class AutomationRules::ActionService < ActionService
       attributes = params[:content_attributes] || {}
       params[:content_attributes] = attributes.merge(automation_rule_id: @rule.id, automation_reply_batch: true)
     end
-    @reply_messages << Messages::MessageBuilder.new(nil, @conversation, params).perform
+    message = Messages::MessageBuilder.new(nil, @conversation, params).perform
+    @reply_messages << message
+    message
   end
 
   def enqueue_whatsapp_replies
@@ -64,11 +70,14 @@ class AutomationRules::ActionService < ActionService
 
   def send_interactive_message(params)
     payload = JSON.parse(params.fetch(0))
+    flow = AutomationRules::InteractiveFlowService.new(@conversation, @rule, @flow_depth)
+    payload = flow.prepare(payload)
     attributes = payload.except('content').merge(automation_rule_id: @rule.id).with_indifferent_access
     message_params = ActionController::Parameters.new(
       content: payload.fetch('content'), content_type: 'input_select', private: false, content_attributes: attributes
     )
-    build_reply(message_params)
+    message = build_reply(message_params)
+    flow.activate(message)
   end
 
   def update_contact_attribute(params)

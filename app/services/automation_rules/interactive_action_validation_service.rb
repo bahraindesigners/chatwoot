@@ -2,7 +2,7 @@ class AutomationRules::InteractiveActionValidationService
   MAX_ITEMS = 10
   MAX_BUTTONS = 3
   PAYLOAD_KEYS = %w[content items list_button list_section].freeze
-  ITEM_KEYS = %w[title value description].freeze
+  ITEM_KEYS = %w[title value description next_step].freeze
 
   def initialize(actions, account)
     @actions = actions || []
@@ -13,6 +13,17 @@ class AutomationRules::InteractiveActionValidationService
     @actions.is_a?(Array) && @actions.all? { |action| valid_action?(action) }
   rescue JSON::ParserError
     false
+  end
+
+  def valid_next_step?(step)
+    return false unless step.is_a?(Hash) && (step.keys - %w[automation_rule_id contact_attribute]).empty?
+    return false unless step['automation_rule_id'].is_a?(Integer)
+    return false unless @account.automation_rules.active.where(execution_delay: nil).exists?(id: step['automation_rule_id'])
+    return true unless step.key?('contact_attribute')
+
+    attribute = step['contact_attribute']
+    attribute.is_a?(Hash) && attribute.keys.sort == %w[key value] &&
+      valid_contact_attribute?([attribute['key'], attribute['value']])
   end
 
   private
@@ -55,6 +66,9 @@ class AutomationRules::InteractiveActionValidationService
     return false unless valid_item_structure?(items)
     return false unless items.all? { |item| valid_item?(item, list?(items) ? 24 : 20) }
 
+    return false if items.none? { |item| item.key?('next_step') } &&
+                    items.any? { |item| AutomationRules::InteractiveFlowService::REPLY_ID_PATTERN.match?(item['value']) }
+
     items.pluck('value').uniq.length == items.length
   end
 
@@ -73,7 +87,8 @@ class AutomationRules::InteractiveActionValidationService
 
   def valid_item?(item, title_limit)
     valid_text?(item['title'], title_limit) && valid_text?(item['value'], 200) &&
-      (!item.key?('description') || valid_text?(item['description'], 72))
+      (!item.key?('description') || valid_text?(item['description'], 72)) &&
+      (!item.key?('next_step') || valid_next_step?(item['next_step']))
   end
 
   def valid_text?(value, limit)
