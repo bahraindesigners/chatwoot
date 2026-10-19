@@ -10,6 +10,8 @@ Rails.application.config.after_initialize do
   if api_key.present?
     Agents.configure do |config|
       Llm::Config.configure_agents(config, api_key: api_key, api_endpoint: api_endpoint)
+      config.openai_protocol = :chat_completions
+      config.model_registry_file = Rails.root.join('config/llm_models.json').to_s
       config.default_model = model
       config.debug = false
     end

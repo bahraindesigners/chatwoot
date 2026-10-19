@@ -10,8 +10,8 @@ module Concerns::Agentable
       instructions: ->(context) { agent_instructions(context, runtime_configuration: runtime_configuration) },
       tools: agent_tools,
       model: route[:model],
-      temperature: temperature.presence&.to_f || DEFAULT_TEMPERATURE,
-      response_schema: agent_response_schema
+      response_schema: agent_response_schema,
+      **Captain::ResponsesConfig.options(model: route[:model], temperature: temperature.presence&.to_f || DEFAULT_TEMPERATURE)
     }
     if route[:source] == :installation_override
       options[:provider] = route[:provider]
@@ -31,6 +31,8 @@ module Concerns::Agentable
         current_time: format_current_time(state[:timezone]),
         conversation: state[:conversation] || {},
         contact: config['feature_contact_attributes'].present? ? state[:contact] : nil,
+        can_verify_email: state[:can_verify_email],
+        verified_email: state[:verified_email],
         campaign: state[:campaign] || {},
         message_length_limit: state[:message_length_limit]
       )
