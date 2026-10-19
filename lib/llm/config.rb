@@ -42,7 +42,7 @@ module Llm::Config
       endpoint = api_endpoint.presence || DEFAULT_API_ENDPOINT
       provider = provider_for(endpoint)
 
-      config.openai_api_key = api_key
+      config.openai_api_key = api_key if api_key.present?
       config.openai_api_base = openai_compatible_api_base(endpoint)
       config.public_send("#{provider}_api_key=", api_key) unless provider == 'openai'
     end
@@ -51,7 +51,7 @@ module Llm::Config
       endpoint = api_endpoint.presence || DEFAULT_API_ENDPOINT
       provider = provider_for(endpoint)
 
-      config.openai_api_key = api_key
+      config.openai_api_key = api_key if api_key.present?
       config.openai_api_base = openai_compatible_api_base(endpoint)
       config.openai_use_system_role = provider != 'openai'
 
@@ -65,8 +65,9 @@ module Llm::Config
 
     def configure_ruby_llm
       RubyLLM.configure do |config|
-        configure_provider(config, api_key: system_api_key, api_endpoint: openai_endpoint) if system_api_key.present?
+        configure_provider(config, api_key: system_api_key, api_endpoint: openai_endpoint)
         config.model_registry_file = Rails.root.join('config/llm_models.json').to_s
+        config.openai_protocol = :chat_completions
         config.logger = Rails.logger
       end
     end

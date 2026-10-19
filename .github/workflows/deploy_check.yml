@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   deployment_check:
+    if: github.repository == 'chatwoot/chatwoot'
     name: Check Deployment
     runs-on: ubuntu-latest
     steps:
@@ -32,8 +33,8 @@ jobs:
           sleep 600
           while [ $attempt -le $max_attempts ]; do
             response=$(curl -s -o /dev/null -w "%{http_code}" https://chatwoot-pr-${{ github.event.pull_request.number }}.herokuapp.com/api)
-            status_code=$(echo $response | head -n   1)
-            if [ $status_code -eq   200 ]; then
+            status_code=$(echo "$response" | head -n   1)
+            if [ "$status_code" -eq 200 ]; then
               body=$(curl -s https://chatwoot-pr-${{ github.event.pull_request.number }}.herokuapp.com/api)
               if echo "$body" | jq -e '.version and .timestamp and .queue_services == "ok" and .data_services == "ok"' > /dev/null; then
                 echo "Deployment successful"
@@ -50,4 +51,3 @@ jobs:
           done
           echo "Deployment failed after $max_attempts attempts"
           exit  1
-          fi

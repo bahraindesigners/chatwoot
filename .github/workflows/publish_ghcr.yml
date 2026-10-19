@@ -17,7 +17,7 @@ env:
 
 jobs:
   build:
-    if: github.repository == 'bahraindesigners/chatwoot' && github.ref == 'refs/heads/develop'
+    if: github.repository == 'bahraindesigners/chatwoot' && (github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: read
       packages: write
@@ -98,9 +98,13 @@ jobs:
         run: |
           docker buildx imagetools create \
             --tag "$IMAGE:sha-$GITHUB_SHA" \
-            --tag "$IMAGE:develop" \
             "$IMAGE:sha-$GITHUB_SHA-amd64" \
             "$IMAGE:sha-$GITHUB_SHA-arm64"
+          if [ "$GITHUB_REF" = 'refs/heads/develop' ]; then
+            docker buildx imagetools create \
+              --tag "$IMAGE:develop" \
+              "$IMAGE:sha-$GITHUB_SHA"
+          fi
           docker buildx imagetools inspect "$IMAGE:sha-$GITHUB_SHA"
           {
             echo '## Image ready for Dokploy'
@@ -109,5 +113,5 @@ jobs:
             echo "\`$IMAGE:sha-$GITHUB_SHA\`"
             echo
             echo 'Platforms: linux/amd64 and linux/arm64.'
-            echo 'The develop tag follows successful builds; use the SHA tag to pin production.'
+            echo 'Review-branch builds publish SHA tags only; develop follows successful develop builds.'
           } >> "$GITHUB_STEP_SUMMARY"

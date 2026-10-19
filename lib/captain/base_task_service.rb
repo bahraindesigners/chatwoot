@@ -43,11 +43,11 @@ class Captain::BaseTaskService
 
     model_route = resolved_model_route(model: model, feature: feature)
     model = model_route[:model]
-    instrumentation_params = build_instrumentation_params(model, messages)
+    instrumentation_params = build_instrumentation_params(model, messages, feature: feature)
     instrumentation_method = tools.any? ? :instrument_tool_session : :instrument_llm_call
 
     response = send(instrumentation_method, instrumentation_params) do
-      execute_ruby_llm_request(model_route: model_route, messages: messages, schema: schema, tools: tools)
+      execute_ruby_llm_request(model_route: model_route, messages: messages, schema: schema, tools: tools, feature: feature)
     end
 
     return response unless build_follow_up_context? && response[:message].present?
@@ -64,40 +64,44 @@ class Captain::BaseTaskService
     { model: model, provider: Llm::Models.provider_for(model), source: :explicit }
   end
 
-  def execute_ruby_llm_request(model_route:, messages:, schema: nil, tools: [])
+  def execute_ruby_llm_request(model_route:, messages:, schema: nil, tools: [], feature: nil)
     credential = llm_credential
 
     Llm::Config.with_api_key(credential[:api_key], api_base: api_base) do |context|
-      chat = build_chat(context, model_route: model_route, messages: messages, schema: schema, tools: tools)
+      chat = build_chat(context, model_route: model_route, messages: messages, schema: schema, tools: tools, feature: feature)
 
       conversation_messages = messages.reject { |m| m[:role] == 'system' }
       return { error: 'No conversation messages provided', error_code: 400, request_messages: messages } if conversation_messages.empty?
 
       add_messages_if_needed(chat, conversation_messages)
-      build_ruby_llm_response(chat.ask(conversation_messages.last[:content]), messages)
+      build_ruby_llm_response(chat.ask(conversation_messages.last[:content]), messages, schema: schema)
     end
   rescue StandardError => e
     capture_llm_exception(e, credential: credential)
     { error: e.message, request_messages: messages }
   end
 
-  def build_chat(context, model_route:, messages:, schema: nil, tools: [])
-    chat_options = { model: model_route[:model] }
-    if model_route[:source] == :installation_override
-      chat_options[:provider] = model_route[:provider]
-      chat_options[:assume_model_exists] = true
-    end
-    chat = context.chat(**chat_options)
+  def build_chat(context, model_route:, messages:, **request)
+    tools = request.fetch(:tools, [])
+    chat = context.chat(**build_chat_options(model_route, request[:feature]))
     system_msg = messages.find { |m| m[:role] == 'system' }
     chat.with_instructions(system_msg[:content]) if system_msg
-    chat.with_schema(schema) if schema
+    chat.with_schema(request[:schema]) if request[:schema]
 
     if tools.any?
-      tools.each { |tool| chat = chat.with_tool(tool) }
-      chat.on_end_message { |message| record_generation(chat, message, model_route[:model]) }
+      tools.each { |tool| chat = chat.with_tools(tool) }
+      chat.after_message { |message| record_generation(chat, message, model_route[:model]) }
     end
 
     chat
+  end
+
+  def build_chat_options(model_route, feature)
+    options = Captain::ResponsesConfig.options(model: model_route[:model], temperature: nil, feature: feature)
+    chat_options = { model: model_route[:model], **options.slice(:protocol) }
+    return chat_options unless model_route[:source] == :installation_override
+
+    chat_options.merge(provider: model_route[:provider], assume_model_exists: true)
   end
 
   def add_messages_if_needed(chat, conversation_messages)
@@ -108,19 +112,20 @@ class Captain::BaseTaskService
     end
   end
 
-  def build_ruby_llm_response(response, messages)
+  def build_ruby_llm_response(response, messages, schema: nil)
     {
-      message: response.content,
+      message: schema ? response.parsed : response.content,
       usage: {
-        'prompt_tokens' => response.input_tokens,
-        'completion_tokens' => response.output_tokens,
-        'total_tokens' => (response.input_tokens || 0) + (response.output_tokens || 0)
-      },
+        'prompt_tokens' => response.tokens.input,
+        'completion_tokens' => response.tokens.output,
+        'total_tokens' => (response.tokens.input || 0) + (response.tokens.output || 0),
+        'reasoning_tokens' => response.tokens.thinking
+      }.compact,
       request_messages: messages
     }
   end
 
-  def build_instrumentation_params(model, messages)
+  def build_instrumentation_params(model, messages, feature: nil)
     {
       span_name: "llm.#{event_name}",
       account_id: account.id,
@@ -129,7 +134,7 @@ class Captain::BaseTaskService
       model: model,
       messages: messages,
       temperature: nil,
-      metadata: instrumentation_metadata
+      metadata: instrumentation_metadata.merge(Captain::ResponsesConfig.request_metadata(model: model, feature: feature))
     }
   end
 
