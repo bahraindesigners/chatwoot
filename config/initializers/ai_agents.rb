@@ -7,18 +7,18 @@ Rails.application.config.after_initialize do
   model = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value.presence || LlmConstants::DEFAULT_MODEL
   api_endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value || LlmConstants::OPENAI_API_ENDPOINT
 
-  if api_key.present?
-    Agents.configure do |config|
-      Llm::Config.configure_agents(config, api_key: api_key, api_endpoint: api_endpoint)
-      config.openai_protocol = :chat_completions
-      config.model_registry_file = Rails.root.join('config/llm_models.json').to_s
-      config.default_model = model
-      config.debug = false
-    end
+  Agents.configure do |config|
+    Llm::Config.configure_agents(config, api_key: api_key, api_endpoint: api_endpoint)
+    config.openai_protocol = :chat_completions
+    config.model_registry_file = Rails.root.join('config/llm_models.json').to_s
+    config.default_model = model
+    config.debug = false
+  end
 
-    RubyLLM.configure do |config|
-      Llm::Config.configure_provider(config, api_key: api_key, api_endpoint: api_endpoint)
-    end
+  RubyLLM.configure do |config|
+    Llm::Config.configure_provider(config, api_key: api_key, api_endpoint: api_endpoint)
+    config.model_registry_file = Rails.root.join('config/llm_models.json').to_s
+    config.openai_protocol = :chat_completions
   end
 rescue StandardError => e
   Rails.logger.error "Failed to configure AI Agents SDK: #{e.message}"
