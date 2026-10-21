@@ -1,0 +1,35 @@
+name: Test Evolution companion
+
+on:
+  pull_request:
+    paths:
+      - 'deployment/evolution/**'
+      - 'docker-compose.evolution.yaml'
+      - '.github/workflows/test_evolution_build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: deployment/evolution
+          platforms: ${{ matrix.platform }}
+          push: false
+          cache-from: type=gha,scope=evolution-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=evolution-${{ matrix.platform }}

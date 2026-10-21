@@ -2,7 +2,9 @@
 # It can also run alone under a separate Compose project (see deployment/evolution/README.md).
 services:
   evolution-api:
-    image: evoapicloud/evolution-api:v2.3.7
+    image: chatwoot-evolution:2.3.7-chatwoot.1
+    build:
+      context: ./deployment/evolution
     restart: unless-stopped
     depends_on:
       evolution-postgres:

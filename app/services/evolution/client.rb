@@ -36,11 +36,18 @@ class Evolution::Client
             })
     return { state: 'open', qr: nil } if status(instance) == 'open'
 
-    data = request(:get, "/instance/connect/#{instance}")
-    qr = data['base64']
-    raise Error if qr.present? && !qr.start_with?('data:image/png;base64,')
+    { state: 'connecting', qr: current_qr(instance) }
+  end
 
-    { state: 'connecting', qr: qr }
+  def connection(inbox)
+    instance = instance_name(inbox)
+    state = status(instance)
+    configuration = state == 'unpaired' ? nil : request(:get, "/chatwoot/find/#{instance}")
+    {
+      state: state,
+      qr: state == 'connecting' ? current_qr(instance) : nil,
+      reauthorization_required: state != 'unpaired' && !inbox.evolution_authorized?(configuration)
+    }
   end
 
   def instance_name(inbox)
@@ -53,7 +60,7 @@ class Evolution::Client
 
   def deliver_webhook(inbox, body, headers:, timeout:)
     response = HTTParty.post(webhook_url(inbox), body: body, headers: headers, timeout: timeout, follow_redirects: false)
-    raise Error unless response.success?
+    raise Error, I18n.t('evolution.delivery_failed') unless response.success?
   end
 
   def delete_instance(account_id, inbox_id)
@@ -63,6 +70,13 @@ class Evolution::Client
   end
 
   private
+
+  def current_qr(instance)
+    qr = request(:get, "/instance/connect/#{instance}")['base64']
+    raise Error if qr.present? && !qr.start_with?('data:image/png;base64,')
+
+    qr
+  end
 
   def request(method, path, body = nil)
     options = { headers: @headers, timeout: 15 }

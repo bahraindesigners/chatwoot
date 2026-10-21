@@ -1654,6 +1654,8 @@
       "SCAN_HINT": "On the number’s phone, open WhatsApp → Linked devices → Link a device and scan the QR below. Your phone app stays usable.",
       "QR_ALT": "WhatsApp device pairing QR code",
       "SHOW_QR": "Generate a new QR code",
+      "REAUTHORIZE": "Reconnect Chatwoot",
+      "REAUTHORIZE_REQUIRED": "The Chatwoot connection needs to be renewed. Reconnect using your account.",
       "QR_PENDING": "The QR is not ready yet. Wait a moment, then generate a new QR code.",
       "TEST_HINT": "Send a new message from another phone, then reply from this inbox to confirm delivery."
     }

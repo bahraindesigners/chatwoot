@@ -10,8 +10,13 @@ and API inbox. Pair it as a linked device while leaving its phone app installed.
 
 ## Start the service
 
-The optional Compose file pins Evolution to the verified `v2.3.7` image. PostgreSQL,
-Redis and WhatsApp session files have separate persistent volumes. The database and
+The optional Compose file builds `chatwoot-evolution:2.3.7-chatwoot.1` from the
+immutable upstream 2.3.7 runtime and a checksum-verified source archive. Its patch
+keeps routing configuration local to each operation, detects previously accepted
+message IDs, and reports confirmed delivery failures without resending uncertain
+or partially accepted deliveries. Both this companion image and the Chatwoot
+changes are required for the reliability fixes. Upgrading Chatwoot alone does not
+patch an existing Evolution container. PostgreSQL, Redis and WhatsApp session files have separate persistent volumes. The database and
 Redis have no published ports; the API binds only to localhost on port 8081.
 
 ```sh
@@ -104,46 +109,35 @@ cannot authorize a WhatsApp linked device on their behalf.
 
 ### Command-line fallback
 
-Use a dedicated Chatwoot administrator account limited to the account being
-integrated. Evolution needs its user access token to create inboxes and route
-messages. The token is stored in Evolution's own database; protect its volumes and
-backups. Creating a new user or granting access must be approved by the operator.
+The CLI uses the same account-scoped Chatwoot endpoints as the dashboard. It needs
+only `CHATWOOT_API_TOKEN` (or an interactive prompt), never the global Evolution
+API key. The administrator should be limited to the Chatwoot account being
+integrated. The server chooses the canonical instance name and stores the managed
+provider metadata, callback and deletion lifecycle.
 
-The helper uses Python's standard library. Tokens are read from hidden prompts or
-`EVOLUTION_API_KEY` / `CHATWOOT_API_TOKEN` environment variables, never command-line
-arguments. Use a unique inbox name and instance name per number. A collision with
-an existing Chatwoot inbox is rejected before creating anything.
+Create an inbox, assign agents, and use the returned inbox ID (for example, 4):
 
 ```sh
-python3 deployment/evolution/manage.py create internal-operations-01 \
-  --chatwoot-url https://customerservice.lamma.online \
-  --account-id 1 --inbox-name 'Internal Operations' --dry-run
-
-# Remove --dry-run when ready to create the instance and inbox.
-python3 deployment/evolution/manage.py create internal-operations-01 \
-  --chatwoot-url https://customerservice.lamma.online \
-  --account-id 1 --inbox-name 'Internal Operations'
+python3 deployment/evolution/manage.py \
+  --chatwoot-url https://customerservice.lamma.online --account-id 1 \
+  create --inbox-name "Internal Operations" --dry-run
+python3 deployment/evolution/manage.py \
+  --chatwoot-url https://customerservice.lamma.online --account-id 1 \
+  create --inbox-name "Internal Operations"
+python3 deployment/evolution/manage.py \
+  --chatwoot-url https://customerservice.lamma.online --account-id 1 \
+  qr 4 --output /tmp/internal-operations-qr.png
+python3 deployment/evolution/manage.py \
+  --chatwoot-url https://customerservice.lamma.online --account-id 1 status 4
 ```
 
-The helper enables `WHATSAPP-BAILEYS`, ignores groups, disables full-history sync
-and contact/message imports, and configures Evolution to create an API inbox.
-Evolution's bot contact is enabled for QR/status messages. It preserves Chatwoot
-messages when they are deleted on WhatsApp. It does not send a WhatsApp message.
+The `qr` command creates/configures the Evolution instance on first use. On an
+already connected phone it renews Chatwoot credentials without disconnecting the
+phone. The old direct-Evolution CLI interface is replaced; existing unmanaged
+inboxes need operator review before migration. Do not rename/repoint an active
+instance or create a second linked device as an automatic migration.
 
-If instance creation succeeds but inbox configuration fails, the helper reports
-the successful instance creation before the error. Inspect Evolution and Chatwoot
-before retrying; it does not delete a partially configured instance or reuse a
-pre-existing inbox automatically.
-
-Assign agents under Chatwoot **Settings → Inboxes → Internal Operations**. Then:
-
-```sh
-python3 deployment/evolution/manage.py qr internal-operations-01 \
-  --output /tmp/internal-operations-qr.png
-python3 deployment/evolution/manage.py status internal-operations-01
-```
-
-Open the QR image and scan it from the internal number's WhatsApp **Linked devices**.
+When a QR is returned, open the image and scan it from the internal number's WhatsApp **Linked devices**.
 The QR file is created with mode 0600 and will not overwrite an existing file.
 Remove it after pairing. An expired QR can be regenerated into a new file. The
 connection state must become `open`. Pairing grants Evolution access to that
@@ -152,6 +146,22 @@ number's messages, so the phone owner must complete that step.
 Verify a real inbound text and attachment from a test contact, a reply from an
 assigned Chatwoot agent, and reconnection after restarting `evolution-api`. These
 are acceptance checks; a healthy container alone does not establish delivery.
+
+## Connection and delivery recovery
+
+The dashboard polls current connection state and the current QR while pairing.
+It also checks whether Evolution's stored Chatwoot authorization still belongs to
+a user with access to this account. **Reconnect Chatwoot** renews that authorization
+using the current administrator without unlinking an already connected phone.
+No tokens or provider configuration are returned to the browser.
+
+A failed Evolution message's **Retry** action explicitly redelivers that message
+through its API-inbox webhook. The companion skips message IDs it already recorded
+as accepted. Confirmed pre-send failures mark the original message failed; a network
+failure after a send attempt remains uncertain and is not automatically retried.
+Accepted sends are not changed to failed because later bookkeeping fails. Delivery
+is not claimed to be exactly once across a provider crash before its send receipt
+is persisted. Check the recipient before manually repeating an uncertain send.
 
 ## Operations
 
@@ -173,9 +183,9 @@ when WhatsApp changes; use the official Cloud API for customer-service numbers.
 
 - [Evolution v2.3.7 image](https://hub.docker.com/r/evoapicloud/evolution-api/tags?name=v2.3.7)
 - [Evolution connection types and Chatwoot integration](https://github.com/evolution-foundation/evolution-api)
-- [Instance API routes](https://github.com/evolution-foundation/evolution-api/blob/main/src/api/routes/instance.router.ts)
-- [Chatwoot adapter and API inbox creation](https://github.com/evolution-foundation/evolution-api/blob/main/src/api/integrations/chatbot/chatwoot/services/chatwoot.service.ts)
-- [Chatwoot configuration fields](https://github.com/evolution-foundation/evolution-api/blob/main/src/api/integrations/chatbot/chatwoot/dto/chatwoot.dto.ts)
+- [Instance API routes](https://github.com/evolution-foundation/evolution-api/blob/2.3.7/src/api/routes/instance.router.ts)
+- [Chatwoot adapter and API inbox creation](https://github.com/evolution-foundation/evolution-api/blob/2.3.7/src/api/integrations/chatbot/chatwoot/services/chatwoot.service.ts)
+- [Chatwoot configuration fields](https://github.com/evolution-foundation/evolution-api/blob/2.3.7/src/api/integrations/chatbot/chatwoot/dto/chatwoot.dto.ts)
 
 Runtime image is version-pinned; the upstream source links describe the contracts
 used when this integration was added. Validate the contracts before changing versions.

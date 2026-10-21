@@ -31,6 +31,7 @@
 
 en:
   evolution:
+    delivery_failed: "WhatsApp did not accept this message. Check the connection and try again."
     name_locked: "cannot be changed after creation because Evolution routes messages by inbox name"
     invalid_name: "Enter an inbox name between 1 and 100 characters."
     not_configured: "Evolution is not configured. Ask your administrator to enable the service."
