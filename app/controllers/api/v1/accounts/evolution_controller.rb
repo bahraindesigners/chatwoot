@@ -20,8 +20,7 @@ class Api::V1::Accounts::EvolutionController < Api::V1::Accounts::BaseController
   end
 
   def status
-    client = Evolution::Client.new
-    render json: { state: client.status(client.instance_name(@inbox)) }
+    render json: Evolution::Client.new.connection(@inbox)
   end
 
   def qr

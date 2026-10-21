@@ -6,12 +6,12 @@ class EvolutionChannel extends ApiClient {
     super('evolution', { accountScoped: true });
   }
 
-  status(inboxId) {
-    return axios.get(`${this.url}/${inboxId}/status`);
+  status(inboxId, config) {
+    return axios.get(`${this.url}/${inboxId}/status`, config);
   }
 
-  qr(inboxId) {
-    return axios.post(`${this.url}/${inboxId}/qr`);
+  qr(inboxId, config) {
+    return axios.post(`${this.url}/${inboxId}/qr`, {}, config);
   }
 }
 

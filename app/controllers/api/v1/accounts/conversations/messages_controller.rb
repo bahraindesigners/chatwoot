@@ -30,7 +30,10 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   def retry
     return if message.blank?
 
-    ::SendReplyJob.perform_later(message.id) if claim_message_retry
+    return unless claim_message_retry
+
+    job = @conversation.inbox.evolution? ? Evolution::RetryMessageJob : ::SendReplyJob
+    job.perform_later(message.id)
   rescue StandardError => e
     render_could_not_create_error(e.message)
   end
