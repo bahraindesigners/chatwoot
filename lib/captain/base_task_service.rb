@@ -3,7 +3,7 @@ class Captain::BaseTaskService
   include Captain::ToolInstrumentation
   include Llm::ExceptionTrackable
 
-  # gpt-4o-mini supports 128,000 tokens
+  # Sized for a 128,000-token context window
   # 1 token is approx 4 characters
   # sticking with 120000 to be safe
   # 120000 * 4 = 480,000 characters (rounding off downwards to 400,000 to be safe)
@@ -83,7 +83,9 @@ class Captain::BaseTaskService
 
   def build_chat(context, model_route:, messages:, **request)
     tools = request.fetch(:tools, [])
-    chat = context.chat(**build_chat_options(model_route, request[:feature]))
+    options = Captain::ResponsesConfig.options(model: model_route[:model], temperature: nil, feature: request[:feature])
+    chat = context.chat(**build_chat_options(model_route, options[:protocol]))
+    chat.with_thinking(**options[:thinking]) if options[:thinking]
     system_msg = messages.find { |m| m[:role] == 'system' }
     chat.with_instructions(system_msg[:content]) if system_msg
     chat.with_schema(request[:schema]) if request[:schema]
@@ -96,9 +98,8 @@ class Captain::BaseTaskService
     chat
   end
 
-  def build_chat_options(model_route, feature)
-    options = Captain::ResponsesConfig.options(model: model_route[:model], temperature: nil, feature: feature)
-    chat_options = { model: model_route[:model], **options.slice(:protocol) }
+  def build_chat_options(model_route, protocol)
+    chat_options = { model: model_route[:model], protocol: protocol }.compact
     return chat_options unless model_route[:source] == :installation_override
 
     chat_options.merge(provider: model_route[:provider], assume_model_exists: true)
