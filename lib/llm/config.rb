@@ -2,7 +2,7 @@ require 'ruby_llm'
 require 'uri'
 
 module Llm::Config
-  DEFAULT_MODEL = 'gpt-4.1-mini'.freeze
+  DEFAULT_MODEL = 'gpt-6-luna'.freeze
   DEFAULT_API_ENDPOINT = 'https://api.openai.com'.freeze
   PROVIDER_HOSTS = {
     'openrouter.ai' => 'openrouter'
