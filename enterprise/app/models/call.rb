@@ -69,6 +69,7 @@ class Call < ApplicationRecord
 
   # Phones that were rung learn the ring is over; see Voice::VoipPushService
   after_update_commit :cancel_phone_ring, if: :ring_just_ended?
+  include Concerns::CallAssignmentHold
   # On create too: a call whose end arrived before its start is created and ended in one transaction
   after_commit :notify_missed_call, on: %i[create update], if: :missed_just_now?
   validates :status, presence: true, inclusion: { in: STATUSES }
@@ -80,8 +81,6 @@ class Call < ApplicationRecord
   def self.find_by_provider_call_id(provider, sid)
     find_by(provider: provider, provider_call_id: sid)
   end
-
-  def announcement_kind = ANNOUNCED_END_REASONS[end_reason]
 
   # An inbound call nobody answered, however it ended: unanswered, or completed or failed
   # with no agent on it, as when the caller hangs up during the ring and the provider
@@ -237,6 +236,9 @@ class Call < ApplicationRecord
   end
 
   def dismissed_user_ids = ring_state.fetch('dismissed_user_ids', [])
+
+  # The step a ring in turn is on; a dismiss moves it on, so the step queued before is dropped
+  def ring_step = ring_state.fetch('ring_step', 1)
 
   # Payload shape matches Whatsapp::CallService#broadcast so the frontend's
   # onVoiceCallAccepted/onVoiceCallEnded handlers can treat both providers uniformly.
